@@ -192,6 +192,17 @@
   #editBtn.on, #noteBtn.on{background:var(--amber); color:#fff; border-color:#8a5607;}
   .map-note > div{pointer-events:inherit;}
   .feed-c{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:11px; border:1.5px solid var(--ink); padding:1px 6px; background:var(--paper-2); margin-right:6px;}
+  .dt-banner{border:2px solid var(--down); background:#EFDEDD; padding:10px 12px; margin-bottom:10px;}
+  .dt-banner .big{font-size:17px; font-weight:700; color:var(--down);}
+  .statrow{display:grid; grid-template-columns:84px 1fr 70px; gap:8px; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; margin-bottom:5px;}
+  .bar{height:14px; background:var(--paper-2); border:1px solid var(--rule);}
+  .bar i{display:block; height:100%; background:var(--red);}
+  .bar.g i{background:var(--draft);}
+  .stat-head{font-size:14px; font-weight:700; border-bottom:1px solid var(--rule); margin:12px 0 8px; padding-bottom:2px;}
+  .headline{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:4px;}
+  .headline .hbox{border:1.5px solid var(--ink); background:var(--card); padding:7px 12px; text-align:center;}
+  .headline .hbox b{display:block; font-size:19px;}
+  .headline .hbox span{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -251,6 +262,8 @@
       <button id="drivesBtn">Drives</button>
       <button id="pumpsBtn">Pumps</button>
       <button id="feedBtn">This week</button>
+      <button id="dtBtn">Downtime</button>
+      <button id="statsBtn">Stats</button>
       <button id="boardBtn">Fleet board</button>
       <button id="partsBtn">Parts list</button>
       <button id="exportBtn">Copy report</button>
@@ -420,6 +433,31 @@
     </div>
   </div>
 </div>
+<!-- Downtime -->
+<div class="modal-bg" id="dtModal">
+  <div class="modal">
+    <h3>Downtime — <span id="dtMach"></span><button class="x" id="dtClose" aria-label="Close">✕</button></h3>
+    <div class="body">
+      <div id="dtActive"></div>
+      <div id="dtStartForm">
+        <div class="field"><label>Section involved</label><select id="dtSec"></select></div>
+        <div class="field"><label>Reason</label><input id="dtReason" placeholder="e.g. Gripper bar jam, drive fault F0034"></div>
+        <div class="field"><label>Logged by</label><input id="dtWho" placeholder="Initials or name"></div>
+        <div class="actions"><button class="go" id="dtStart" style="background:var(--down); border-color:var(--down);">Machine DOWN now</button></div>
+      </div>
+      <div class="stat-head">History</div>
+      <div id="dtList"></div>
+      <div class="actions"><button id="dtCopy">Copy downtime log</button></div>
+    </div>
+  </div>
+</div>
+<!-- Stats -->
+<div class="modal-bg" id="statsModal">
+  <div class="modal wide">
+    <h3>Fleet stats — last 30 days<button class="x" id="statsClose" aria-label="Close">✕</button></h3>
+    <div class="body" id="statsBody"></div>
+  </div>
+</div>
 <!-- Fleet activity feed -->
 <div class="modal-bg" id="feedModal">
   <div class="modal wide">
@@ -475,7 +513,7 @@ let addType = 'update', addPhotoData = null, walk = null;
 
 function blankCutter(){
   const sections = {}; SECTIONS.forEach(s => sections[s.id] = 'ok');
-  return {sections, entries:[], insp:[], notes:[], lastWalkdown:null};
+  return {sections, entries:[], insp:[], notes:[], dt:[], lastWalkdown:null};
 }
 function blankFleet(){
   const f = {cutters:{}, author:'', drives:[], pumps:[], txt:{}, v:3};
@@ -525,6 +563,7 @@ function adoptRows(rows){
       if(CUTTERS.includes(c) && row.data && row.data.sections){
         if(!Array.isArray(row.data.insp)) row.data.insp = [];
         if(!Array.isArray(row.data.notes)) row.data.notes = [];
+        if(!Array.isArray(row.data.dt)) row.data.dt = [];
         fleet.cutters[c] = row.data;
       }
     }
@@ -541,6 +580,7 @@ async function loadFleet(){
   if(!Array.isArray(fleet.pumps)) fleet.pumps = [];
   if(!fleet.txt || typeof fleet.txt !== 'object') fleet.txt = {};
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].notes)) fleet.cutters[c].notes = []; });
+  CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].dt)) fleet.cutters[c].dt = []; });
   try{
     adoptRows(await cloudFetchAll());
     cloudOk = true; setChip('ok'); cacheSet();
@@ -804,6 +844,10 @@ function renderLog(){
       `<button data-act="del">delete</button></div>`;
     const ph=div.querySelector('.e-photo');
     if(ph) ph.onclick=()=>{ $('viewerImg').src=e.img; $('viewer').classList.add('open'); };
+    const etx=div.querySelector('.e-text');
+    etx.onclick=()=>{ if(!editMode) return;
+      const v=prompt('Edit entry text', e.text);
+      if(v!==null && v.trim()){ e.text=v.trim(); saveFleet(); renderAll(); } };
     div.querySelectorAll('.e-actions button').forEach(b=>b.onclick=()=>{
       if(b.dataset.act==='resolve'){ e.resolved=!e.resolved; }
       else if(confirm('Delete this entry?')){ cu.entries=cu.entries.filter(x=>x.id!==e.id); }
@@ -1003,6 +1047,17 @@ $('exportBtn').onclick=async()=>{
   const recent=cu.entries.filter(e=>e.type==='update'||e.type==='pm').sort((a,b)=>b.ts-a.ts).slice(0,10);
   lines.push(''); lines.push('RECENT UPDATES / PM');
   recent.forEach(e=>{ const s=secById(e.sec); lines.push(`  ${fmtDate(e.ts)}  ${s.letter} ${s.name} \u2014 ${e.text}`); });
+  const dts=(cu.dt||[]);
+  const win30=Date.now()-30*86400000;
+  const dtH=dts.reduce((t,d)=>{ const e=d.end||Date.now(); const s=Math.max(d.start,win30); return e>win30 ? t+(e-s) : t; },0);
+  const act=dts.find(d=>!d.end);
+  if(dts.length){
+    lines.push(''); lines.push('DOWNTIME (last 30 days): '+durStr(dtH)+(act?'  — CURRENTLY DOWN: '+act.reason:''));
+    dts.slice().sort((a,b)=>b.start-a.start).slice(0,8).forEach(d=>{
+      const s=secById(d.sec);
+      lines.push('  '+fmtDate(d.start)+'  '+(s?s.letter+' '+s.name:'')+' — '+d.reason+'  :: '+(d.end?durStr(d.end-d.start):'ONGOING'));
+    });
+  }
   const ins=(cu.insp||[]).slice().sort((a,b)=>(b.y||0)-(a.y||0));
   if(ins.length){
     const dn=ins.filter(i=>i.st==='done').length;
@@ -1341,6 +1396,10 @@ function buildFeed(){
     const cu = fleet.cutters[c];
     cu.entries.forEach(e => ev.push({ ts:e.ts, c, sec:e.sec, kind:e.type, text:e.text, who:e.who }));
     (cu.insp||[]).forEach(i => { if(i.st==='done' && i.done) ev.push({ ts:i.done, c, sec:i.sec, kind:'insp', text:'Inspection repair DONE: '+i.text, who:i.who }); });
+    (cu.dt||[]).forEach(d => {
+      ev.push({ ts:d.start, c, sec:d.sec, kind:'down', text:'DOWN: '+d.reason, who:d.who });
+      if(d.end) ev.push({ ts:d.end, c, sec:d.sec, kind:'up', text:'Back UP after '+durStr(d.end-d.start)+(d.fix?' — '+d.fix:'')+' ('+d.reason+')', who:d.who });
+    });
     if(cu.lastWalkdown) ev.push({ ts:cu.lastWalkdown, c, sec:null, kind:'walk', text:'Weekly walkdown completed', who:'' });
   });
   ev.sort((a,b) => b.ts - a.ts);
@@ -1355,8 +1414,8 @@ $('feedBtn').onclick = () => {
   f.list.forEach(e => {
     const s = e.sec ? secById(e.sec) : null;
     const div = document.createElement('div');
-    div.className = 'entry t-' + (e.kind==='insp'||e.kind==='walk' ? 'pm' : e.kind);
-    const lab = { issue:'ISSUE', part:'PART', update:'UPDATE', pm:'PM/INSP', insp:'INSPECTION', walk:'WALKDOWN' }[e.kind] || e.kind.toUpperCase();
+    div.className = 'entry t-' + (e.kind==='insp'||e.kind==='walk' ? 'pm' : e.kind==='down' ? 'issue' : e.kind==='up' ? 'update' : e.kind);
+    const lab = { issue:'ISSUE', part:'PART', update:'UPDATE', pm:'PM/INSP', insp:'INSPECTION', walk:'WALKDOWN', down:'DOWN', up:'BACK UP' }[e.kind] || e.kind.toUpperCase();
     div.innerHTML = '<div class="e-top"><span class="feed-c">#'+e.c+'</span><span class="e-type">'+lab+'</span>'
       + (s ? '<span>'+s.letter+' · '+s.name+'</span>' : '')
       + '<span>'+fmtDate(e.ts)+'</span>' + (e.who ? '<span>· '+esc(e.who)+'</span>' : '') + '</div>'
@@ -1387,6 +1446,116 @@ $('feedCopy').onclick = async () => {
   try{ await navigator.clipboard.writeText(lines.join('\n')); toast('Weekly update copied — paste into your email to Mitch'); }
   catch(e){ toast('Copy failed'); }
 };
+
+/* ================= downtime ================= */
+function durStr(ms){
+  const m=Math.max(1,Math.round(ms/60000));
+  return m<60 ? m+'m' : Math.floor(m/60)+'h '+(m%60)+'m';
+}
+function openDt(){
+  $('dtMach').textContent='Cutter '+curCutter;
+  fillSecSelect($('dtSec'));
+  if(curSec) $('dtSec').value=curSec;
+  $('dtReason').value=''; $('dtWho').value=fleet.author||'';
+  renderDt(); $('dtModal').classList.add('open');
+}
+function renderDt(){
+  const cu=fleet.cutters[curCutter];
+  const act=(cu.dt||[]).find(d=>!d.end);
+  const ab=$('dtActive');
+  if(act){
+    const s=secById(act.sec);
+    ab.innerHTML='<div class="dt-banner"><div class="big">DOWN — '+durStr(Date.now()-act.start)+'</div>'+
+      '<div class="small" style="margin:3px 0 8px;">'+(s?s.letter+' '+s.name+' · ':'')+esc(act.reason)+' · since '+fmtDate(act.start)+'</div>'+
+      '<button id="dtEnd" style="border:1.5px solid var(--green-deep); background:var(--green); color:#fff; font-weight:600; padding:7px 16px; cursor:pointer; font-family:inherit;">Mark back UP</button></div>';
+    document.getElementById('dtEnd').onclick=()=>{
+      const fix=prompt('What fixed it? (optional)');
+      act.end=Date.now(); if(fix && fix.trim()) act.fix=fix.trim();
+      if(cu.sections[act.sec]==='down') cu.sections[act.sec]='watch';
+      saveFleet(); renderDt(); renderAll();
+      toast('Cutter '+curCutter+' back up after '+durStr(act.end-act.start));
+    };
+    $('dtStartForm').style.display='none';
+  } else { ab.innerHTML=''; $('dtStartForm').style.display='block'; }
+  const list=(cu.dt||[]).slice().sort((a,b)=>b.start-a.start);
+  const box=$('dtList'); box.innerHTML='';
+  if(!list.length){ box.innerHTML='<div class="empty">No downtime recorded on this cutter. Long may it last.</div>'; }
+  list.forEach(d=>{
+    const s=secById(d.sec);
+    const div=document.createElement('div'); div.className='tr-item';
+    div.innerHTML='<div class="grow"><div class="t">'+esc(d.reason)+(d.fix?' <span class="small">— fix: '+esc(d.fix)+'</span>':'')+'</div>'+
+      '<div class="m">'+(s?s.letter+' '+s.name+' · ':'')+fmtDate(d.start)+(d.who?' · '+esc(d.who):'')+'</div></div>'+
+      '<span class="pill '+(d.end?'p-done':'p-open')+'">'+(d.end?durStr(d.end-d.start):'ONGOING')+'</span><button class="del">del</button>';
+    div.querySelector('.del').onclick=()=>{
+      if(!confirm('Delete this downtime record?')) return;
+      cu.dt=cu.dt.filter(x=>x.id!==d.id); saveFleet(); renderDt(); renderAll();
+    };
+    box.appendChild(div);
+  });
+}
+$('dtBtn').onclick=openDt;
+$('dtClose').onclick=()=>{ $('dtModal').classList.remove('open'); renderAll(); };
+$('dtStart').onclick=()=>{
+  const reason=$('dtReason').value.trim();
+  if(!reason){ toast('Give a reason first'); return; }
+  fleet.author=$('dtWho').value.trim();
+  const cu=fleet.cutters[curCutter];
+  cu.dt=cu.dt||[];
+  const sec=$('dtSec').value;
+  cu.dt.push({ id:Date.now()+'-'+Math.random().toString(36).slice(2,6), start:Date.now(), end:null, sec, reason, who:fleet.author });
+  cu.sections[sec]='down';
+  saveFleet(); renderDt(); renderAll();
+  toast('Cutter '+curCutter+' marked DOWN');
+};
+$('dtCopy').onclick=async()=>{
+  const cu=fleet.cutters[curCutter];
+  const list=(cu.dt||[]).slice().sort((a,b)=>b.start-a.start);
+  const lines=['DOWNTIME LOG — CUTTER '+curCutter+' — '+new Date().toISOString().slice(0,10).replace(/-/g,'.'),''];
+  list.forEach(d=>{ const s=secById(d.sec);
+    lines.push('  '+fmtDate(d.start)+'  '+(s?s.letter+' '+s.name:'')+' — '+d.reason+'  :: '+(d.end?durStr(d.end-d.start):'ONGOING')+(d.fix?'  fix: '+d.fix:'')); });
+  if(!list.length) lines.push('(none)');
+  try{ await navigator.clipboard.writeText(lines.join('\n')); toast('Downtime log copied'); }
+  catch(e){ toast('Copy failed'); }
+};
+
+/* ================= fleet stats ================= */
+$('statsBtn').onclick=()=>{
+  const win=Date.now()-30*86400000;
+  let totOpen=0, totDtMs=0, walked=0;
+  const dtByCutter={}, openBySec={};
+  CUTTERS.forEach(c=>{
+    const cu=fleet.cutters[c];
+    totOpen+=openCount(cu);
+    if(cu.lastWalkdown && Date.now()-cu.lastWalkdown<WEEK_MS) walked++;
+    let ms=0;
+    (cu.dt||[]).forEach(d=>{
+      const e=d.end||Date.now();
+      if(e>win) ms += e - Math.max(d.start, win);
+    });
+    dtByCutter[c]=ms; totDtMs+=ms;
+    SECTIONS.forEach(s=>{ openBySec[s.id]=(openBySec[s.id]||0)+openCount(cu,s.id); });
+  });
+  const maxDt=Math.max(1,...Object.values(dtByCutter));
+  const maxSec=Math.max(1,...Object.values(openBySec));
+  let html='<div class="headline">'+
+    '<div class="hbox"><b>'+totOpen+'</b><span>open items</span></div>'+
+    '<div class="hbox"><b>'+(totDtMs?durStr(totDtMs):'0m')+'</b><span>downtime 30d</span></div>'+
+    '<div class="hbox"><b>'+walked+'/10</b><span>walked this week</span></div></div>';
+  html+='<div class="stat-head">Downtime by cutter (30 days)</div>';
+  CUTTERS.forEach(c=>{
+    const ms=dtByCutter[c];
+    html+='<div class="statrow"><span>#'+c+' '+(NORTH.includes(c)?'N':'S')+'</span><span class="bar"><i style="width:'+Math.round(ms/maxDt*100)+'%"></i></span><span>'+(ms?durStr(ms):'—')+'</span></div>';
+  });
+  html+='<div class="stat-head">Open issues + parts by section (fleet-wide)</div>';
+  SECTIONS.forEach(s=>{
+    const n=openBySec[s.id];
+    html+='<div class="statrow"><span>'+s.letter+' '+s.name.slice(0,9)+'</span><span class="bar g"><i style="width:'+Math.round(n/maxSec*100)+'%"></i></span><span>'+(n||'—')+'</span></div>';
+  });
+  html+='<p class="small" style="margin-top:10px;">Where the bars pile up is where the PdM program aims next.</p>';
+  $('statsBody').innerHTML=html;
+  $('statsModal').classList.add('open');
+};
+$('statsClose').onclick=()=>$('statsModal').classList.remove('open');
 
 /* ================= boot ================= */
 (async function(){

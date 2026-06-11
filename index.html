@@ -187,14 +187,19 @@
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
   .equip-head{font-size:14px; font-weight:700; border-bottom:1px solid var(--rule); margin:10px 0 6px; padding-bottom:2px;}
   .filter-chip{font-family:'IBM Plex Mono',monospace; font-size:10px; border:1px solid var(--draft); color:var(--draft); padding:1px 7px; cursor:pointer; background:#E8EEF7;}
+  body.editing .editable{outline:1.5px dashed var(--draft); outline-offset:2px; cursor:text;}
+  body.editing #mapPane{box-shadow:inset 0 0 0 3px var(--amber);}
+  #editBtn.on, #noteBtn.on{background:var(--amber); color:#fff; border-color:#8a5607;}
+  .map-note > div{pointer-events:inherit;}
+  .feed-c{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:11px; border:1.5px solid var(--ink); padding:1px 6px; background:var(--paper-2); margin-right:6px;}
 </style>
 </head>
 <body>
 
 <header>
   <div class="masthead">
-    <h1>Mastercut 145 · Fleet Machine Map</h1>
-    <span class="doc-no">FOLDING CARTON · DIE CUTTING · REF 105 000</span>
+    <h1 id="appTitle" class="editable">Mastercut 145 · Fleet Machine Map</h1>
+    <span class="doc-no editable" id="docNo">FOLDING CARTON · DIE CUTTING · REF 105 000</span>
     <span class="spacer"></span>
     <button class="walk-badge" id="walkBadge" title="Start weekly walkdown">⚑ WALKDOWN DUE</button>
     <span class="doc-no mono" id="syncChip" title="Sync status">○ …</span>
@@ -209,12 +214,14 @@
       <button id="zin" title="Zoom in" aria-label="Zoom in">+</button>
       <button id="zout" title="Zoom out" aria-label="Zoom out">−</button>
       <button id="zfit" title="Fit to screen" aria-label="Fit to screen" style="font-size:13px;">⌂</button>
+      <button id="editBtn" title="Edit mode: tap text to edit, drag notes">✎</button>
+      <button id="noteBtn" title="Add a text note to the sheet" style="display:none; font-size:12px;">+T</button>
     </div>
     <div class="legend">
       <span class="ok"><i></i>OK</span><span class="watch"><i></i>WATCH</span>
       <span class="issue"><i></i>ISSUE</span><span class="down"><i></i>DOWN</span>
     </div>
-    <div class="hint">scroll = zoom · drag = pan · click section = detail · dbl-click = zoom to section</div>
+    <div class="hint" id="mapHint">scroll = zoom · drag = pan · click section = detail · dbl-click = zoom to section</div>
     <svg id="svg" viewBox="0 0 2200 1737" role="img" aria-label="Mastercut 145 location of sections sheet">
       <g id="world"></g>
     </svg>
@@ -224,11 +231,11 @@
     <div class="side-head">
       <div class="machine-line">
         <h2 id="machTitle">Cutter 7</h2>
-        <span class="plant-tag" id="machPlant"></span>
+        <span class="plant-tag editable" id="machPlant"></span>
       </div>
       <div class="sec-title">
         <span class="sec-chip" id="secChip">ALL</span>
-        <span id="secName" style="font-weight:600;">Whole machine</span>
+        <span id="secName" class="editable" style="font-weight:600;">Whole machine</span>
       </div>
       <div class="status-row" id="statusRow" style="display:none;">
         <button data-st="ok">OK</button><button data-st="watch">WATCH</button>
@@ -243,6 +250,7 @@
       <button id="inspBtn">Bobst insp</button>
       <button id="drivesBtn">Drives</button>
       <button id="pumpsBtn">Pumps</button>
+      <button id="feedBtn">This week</button>
       <button id="boardBtn">Fleet board</button>
       <button id="partsBtn">Parts list</button>
       <button id="exportBtn">Copy report</button>
@@ -412,6 +420,16 @@
     </div>
   </div>
 </div>
+<!-- Fleet activity feed -->
+<div class="modal-bg" id="feedModal">
+  <div class="modal wide">
+    <h3>Fleet activity — <span id="feedRange"></span><button class="x" id="feedClose" aria-label="Close">✕</button></h3>
+    <div class="body">
+      <div id="feedList"></div>
+      <div class="actions"><button class="go" id="feedCopy">Copy weekly update</button></div>
+    </div>
+  </div>
+</div>
 <div class="viewer" id="viewer"><img id="viewerImg" alt="Entry photo"></div>
 <div class="toast" id="toast"></div>
 
@@ -427,6 +445,7 @@ const SECTIONS = [
   {id:'drive',   letter:'F\u00B7G', name:'Frame & Drive', desc:'Base frames, drive train, chains & shafts'},
   {id:'periph',  letter:'H',  name:'Peripherals',      desc:'Off-machine units \u2014 pallet handling, carts'}
 ];
+SECTIONS.forEach(s => { s.defName = s.name; s.defDesc = s.desc; });
 const CUTTERS = [7,8,9,10,11,12,13,14,15,16];
 const NORTH = [7,8,9,10,11];
 const STORE_KEY = 'mc145-fleet-v1';
@@ -456,10 +475,10 @@ let addType = 'update', addPhotoData = null, walk = null;
 
 function blankCutter(){
   const sections = {}; SECTIONS.forEach(s => sections[s.id] = 'ok');
-  return {sections, entries:[], insp:[], lastWalkdown:null};
+  return {sections, entries:[], insp:[], notes:[], lastWalkdown:null};
 }
 function blankFleet(){
-  const f = {cutters:{}, author:'', drives:[], pumps:[], v:2};
+  const f = {cutters:{}, author:'', drives:[], pumps:[], txt:{}, v:3};
   CUTTERS.forEach(c => f.cutters[c] = blankCutter()); return f;
 }
 
@@ -500,10 +519,12 @@ function adoptRows(rows){
     if(row.id === 'meta'){ if(row.data && typeof row.data.author === 'string') fleet.author = row.data.author; }
     else if(row.id === 'drives'){ if(row.data && Array.isArray(row.data.items)) fleet.drives = row.data.items; }
     else if(row.id === 'pumps'){ if(row.data && Array.isArray(row.data.items)) fleet.pumps = row.data.items; }
+    else if(row.id === 'txt'){ if(row.data && row.data.map) fleet.txt = row.data.map; }
     else {
       const c = parseInt(row.id,10);
       if(CUTTERS.includes(c) && row.data && row.data.sections){
         if(!Array.isArray(row.data.insp)) row.data.insp = [];
+        if(!Array.isArray(row.data.notes)) row.data.notes = [];
         fleet.cutters[c] = row.data;
       }
     }
@@ -518,6 +539,8 @@ async function loadFleet(){
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].insp)) fleet.cutters[c].insp = []; });
   if(!Array.isArray(fleet.drives)) fleet.drives = [];
   if(!Array.isArray(fleet.pumps)) fleet.pumps = [];
+  if(!fleet.txt || typeof fleet.txt !== 'object') fleet.txt = {};
+  CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].notes)) fleet.cutters[c].notes = []; });
   try{
     adoptRows(await cloudFetchAll());
     cloudOk = true; setChip('ok'); cacheSet();
@@ -538,6 +561,7 @@ async function pushDirty(){
     if(id==='meta') return {id:'meta', data:{author:fleet.author||''}, updated_at:now};
     if(id==='drives') return {id:'drives', data:{items:fleet.drives||[]}, updated_at:now};
     if(id==='pumps') return {id:'pumps', data:{items:fleet.pumps||[]}, updated_at:now};
+    if(id==='txt') return {id:'txt', data:{map:fleet.txt||{}}, updated_at:now};
     return {id, data:fleet.cutters[id], updated_at:now};
   });
   setChip('saving');
@@ -559,7 +583,7 @@ function saveKeys(){
 function saveAllCutters(){ CUTTERS.forEach(c => dirty.add(String(c))); dirty.add('meta'); cacheSet(); pushDirty(); }
 
 async function pollCloud(){
-  if(document.querySelector('.modal-bg.open')) return;
+  if(editMode || document.querySelector('.modal-bg.open')) return;
   try{
     const changed = adoptRows(await cloudFetchAll());
     if(!cloudOk){ cloudOk = true; setChip('ok'); if(dirty.size) pushDirty(); }
@@ -619,6 +643,7 @@ function buildMachine(){
     g.addEventListener('dblclick', e => { e.stopPropagation(); zoomToSection(s.id); });
     g.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectSection(s.id);} });
   });
+  el('g',{id:'notesLayer'});
   $('svg').addEventListener('click', () => selectSection(null));
 }
 
@@ -706,6 +731,7 @@ function renderMachine(){
     const cnt=document.querySelector(`text[data-count="${s.id}"]`);
     const n=openCount(cu,s.id); cnt.textContent = n||'';
   });
+  renderNotes();
 }
 
 function renderSched(){
@@ -727,7 +753,7 @@ function renderSched(){
 function renderSide(){
   const cu=fleet.cutters[curCutter];
   $('machTitle').textContent='Cutter '+curCutter;
-  $('machPlant').textContent=(NORTH.includes(curCutter)?'NORTH':'SOUTH')+' PLANT \u00B7 BOBST MASTERCUT 145 PER';
+  $('machPlant').textContent=T('mach.'+curCutter+'.tag', (NORTH.includes(curCutter)?'NORTH':'SOUTH')+' PLANT \u00B7 BOBST MASTERCUT 145 PER');
   const s=curSec?secById(curSec):null;
   $('secChip').textContent=s?s.letter:'ALL';
   $('secName').textContent=s? s.name+' \u2014 '+s.desc : 'Whole machine';
@@ -789,7 +815,7 @@ function renderLog(){
 $('viewer').onclick=()=>$('viewer').classList.remove('open');
 
 function selectSection(id){ curSec=id; renderMachine(); renderSide(); }
-function renderAll(){ renderFleet(); renderMachine(); renderSide(); }
+function renderAll(){ applyTxt(); renderFleet(); renderMachine(); renderSide(); }
 
 /* status buttons */
 $('statusRow').querySelectorAll('button').forEach(b=>{
@@ -1193,6 +1219,172 @@ $('equipCopy').onclick=async()=>{
   });
   if(!items.length) lines.push('(empty)');
   try{ await navigator.clipboard.writeText(lines.join('\n')); toast('List copied'); }
+  catch(e){ toast('Copy failed'); }
+};
+
+/* ================= edit mode: text overrides ================= */
+let editMode=false, placingNote=false, dragNote=null;
+function T(k, d){ const v = fleet && fleet.txt ? fleet.txt[k] : null; return (typeof v === 'string' && v.length) ? v : d; }
+function setTxt(k, v){
+  if(!fleet.txt) fleet.txt = {};
+  if(v && v.length) fleet.txt[k] = v; else delete fleet.txt[k];
+  saveKeys('txt'); renderAll();
+}
+function applyTxt(){
+  SECTIONS.forEach(s => { s.name = T('sec.'+s.id+'.name', s.defName); s.desc = T('sec.'+s.id+'.desc', s.defDesc); });
+  const t=$('appTitle'); if(t) t.textContent = T('app.title', 'Mastercut 145 · Fleet Machine Map');
+  const d=$('docNo'); if(d) d.textContent = T('app.docno', 'FOLDING CARTON · DIE CUTTING · REF 105 000');
+}
+function promptTxt(label, key, cur){
+  const v = prompt('Edit '+label+' (clear the text to reset to default)', cur);
+  if(v === null) return;
+  setTxt(key, v.trim());
+}
+$('appTitle').onclick = () => { if(editMode) promptTxt('title', 'app.title', $('appTitle').textContent); };
+$('docNo').onclick = () => { if(editMode) promptTxt('header label', 'app.docno', $('docNo').textContent); };
+$('machPlant').onclick = () => { if(editMode) promptTxt('Cutter '+curCutter+' subtitle (serial no., etc.)', 'mach.'+curCutter+'.tag', $('machPlant').textContent); };
+$('secName').onclick = () => {
+  if(!editMode || !curSec) return;
+  const s = secById(curSec);
+  const n = prompt('Edit section name (clear to reset)', s.name);
+  if(n !== null) setTxt('sec.'+s.id+'.name', n.trim());
+  const ds = prompt('Edit section description (clear to reset)', secById(curSec).desc);
+  if(ds !== null) setTxt('sec.'+s.id+'.desc', ds.trim());
+};
+
+/* ================= edit mode: map notes ================= */
+function renderNotes(){
+  const layer = document.getElementById('notesLayer'); if(!layer) return;
+  layer.innerHTML = '';
+  const NS='http://www.w3.org/2000/svg';
+  const cu = fleet && fleet.cutters ? fleet.cutters[curCutter] : null; if(!cu) return;
+  (cu.notes||[]).forEach(n => {
+    const fo = document.createElementNS(NS,'foreignObject');
+    fo.setAttribute('x', n.x); fo.setAttribute('y', n.y);
+    fo.setAttribute('width', 280); fo.setAttribute('height', 300);
+    fo.setAttribute('class','map-note');
+    fo.style.overflow = 'visible';
+    fo.style.pointerEvents = editMode ? 'auto' : 'none';
+    fo.style.cursor = editMode ? 'move' : 'default';
+    const div = document.createElementNS('http://www.w3.org/1999/xhtml','div');
+    div.setAttribute('style','display:inline-block; max-width:260px; background:#FFF6CF; border:2px solid #20231F; padding:7px 10px; font-family:Saira Semi Condensed,sans-serif; font-size:16px; line-height:1.3; color:#20231F; box-shadow:3px 3px 0 rgba(32,35,31,.25); white-space:pre-wrap;');
+    div.textContent = n.text;
+    fo.appendChild(div);
+    fo.addEventListener('pointerdown', e => {
+      if(!editMode) return;
+      e.stopPropagation(); e.preventDefault();
+      dragNote = { n, fo, start: clientToWorld(e.clientX, e.clientY), orig:{x:n.x, y:n.y}, moved:false };
+    });
+    layer.appendChild(fo);
+  });
+}
+window.addEventListener('pointermove', e => {
+  if(!dragNote) return;
+  const p = clientToWorld(e.clientX, e.clientY);
+  const dx = p.x - dragNote.start.x, dy = p.y - dragNote.start.y;
+  if(Math.abs(dx) + Math.abs(dy) > 5) dragNote.moved = true;
+  dragNote.n.x = dragNote.orig.x + dx; dragNote.n.y = dragNote.orig.y + dy;
+  dragNote.fo.setAttribute('x', dragNote.n.x); dragNote.fo.setAttribute('y', dragNote.n.y);
+});
+window.addEventListener('pointerup', () => {
+  if(!dragNote) return;
+  const cu = fleet.cutters[curCutter];
+  if(dragNote.moved){ saveFleet(); }
+  else {
+    const n = dragNote.n;
+    const v = prompt('Edit note (clear the text to delete it)', n.text);
+    if(v !== null){
+      if(!v.trim()){ if(confirm('Delete this note?')) cu.notes = cu.notes.filter(x => x.id !== n.id); }
+      else n.text = v.trim();
+      saveFleet(); renderNotes();
+    }
+  }
+  dragNote = null;
+});
+$('svg').addEventListener('click', e => {
+  if(!placingNote) return;
+  e.stopPropagation();
+  const p = clientToWorld(e.clientX, e.clientY);
+  const t = prompt('Note text (shows on the sheet for Cutter '+curCutter+')');
+  placingNote = false; $('noteBtn').classList.remove('on');
+  setHint();
+  if(t && t.trim()){
+    const cu = fleet.cutters[curCutter];
+    cu.notes = cu.notes || [];
+    cu.notes.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,6), x: p.x-130, y: p.y-30, text: t.trim() });
+    saveFleet(); renderNotes(); toast('Note placed — drag it in edit mode to reposition');
+  }
+}, true);
+function setHint(){
+  $('mapHint').textContent = placingNote ? 'tap the sheet where the note should go'
+    : editMode ? 'EDIT MODE · tap dashed text to edit · tap a note to edit, drag to move · +T adds a note'
+    : 'scroll = zoom · drag = pan · click section = detail · dbl-click = zoom to section';
+}
+$('editBtn').onclick = () => {
+  editMode = !editMode;
+  if(!editMode){ placingNote = false; $('noteBtn').classList.remove('on'); }
+  document.body.classList.toggle('editing', editMode);
+  $('editBtn').classList.toggle('on', editMode);
+  $('noteBtn').style.display = editMode ? 'block' : 'none';
+  setHint(); renderNotes();
+};
+$('noteBtn').onclick = () => {
+  placingNote = !placingNote;
+  $('noteBtn').classList.toggle('on', placingNote);
+  setHint();
+};
+
+/* ================= fleet activity feed ================= */
+function buildFeed(){
+  const ev = [];
+  CUTTERS.forEach(c => {
+    const cu = fleet.cutters[c];
+    cu.entries.forEach(e => ev.push({ ts:e.ts, c, sec:e.sec, kind:e.type, text:e.text, who:e.who }));
+    (cu.insp||[]).forEach(i => { if(i.st==='done' && i.done) ev.push({ ts:i.done, c, sec:i.sec, kind:'insp', text:'Inspection repair DONE: '+i.text, who:i.who }); });
+    if(cu.lastWalkdown) ev.push({ ts:cu.lastWalkdown, c, sec:null, kind:'walk', text:'Weekly walkdown completed', who:'' });
+  });
+  ev.sort((a,b) => b.ts - a.ts);
+  const week = ev.filter(e => Date.now() - e.ts < WEEK_MS);
+  return week.length ? { list: week, label: 'last 7 days' } : { list: ev.slice(0,20), label: 'latest 20 events' };
+}
+$('feedBtn').onclick = () => {
+  const f = buildFeed();
+  $('feedRange').textContent = f.label;
+  const box = $('feedList'); box.innerHTML = '';
+  if(!f.list.length){ box.innerHTML = '<div class="empty">Nothing logged anywhere in the fleet yet.</div>'; }
+  f.list.forEach(e => {
+    const s = e.sec ? secById(e.sec) : null;
+    const div = document.createElement('div');
+    div.className = 'entry t-' + (e.kind==='insp'||e.kind==='walk' ? 'pm' : e.kind);
+    const lab = { issue:'ISSUE', part:'PART', update:'UPDATE', pm:'PM/INSP', insp:'INSPECTION', walk:'WALKDOWN' }[e.kind] || e.kind.toUpperCase();
+    div.innerHTML = '<div class="e-top"><span class="feed-c">#'+e.c+'</span><span class="e-type">'+lab+'</span>'
+      + (s ? '<span>'+s.letter+' · '+s.name+'</span>' : '')
+      + '<span>'+fmtDate(e.ts)+'</span>' + (e.who ? '<span>· '+esc(e.who)+'</span>' : '') + '</div>'
+      + '<div class="e-text">'+esc(e.text)+'</div>';
+    box.appendChild(div);
+  });
+  $('feedModal').classList.add('open');
+};
+$('feedClose').onclick = () => $('feedModal').classList.remove('open');
+$('feedCopy').onclick = async () => {
+  const f = buildFeed();
+  const lines = ['MASTERCUT FLEET — WEEKLY UPDATE — '+new Date().toISOString().slice(0,10).replace(/-/g,'.'), ''];
+  const byC = {};
+  f.list.forEach(e => { (byC[e.c] = byC[e.c] || []).push(e); });
+  CUTTERS.forEach(c => {
+    const cu = fleet.cutters[c];
+    const evs = byC[c] || [];
+    const open = openCount(cu);
+    const days = cu.lastWalkdown ? Math.floor((Date.now()-cu.lastWalkdown)/86400000)+'d ago' : 'never';
+    lines.push('CUTTER '+c+' ('+(NORTH.includes(c)?'North':'South')+') — '+worstStatus(cu).toUpperCase()+' · '+open+' open · walkdown '+days);
+    evs.forEach(e => {
+      const s = e.sec ? secById(e.sec) : null;
+      lines.push('  '+fmtDate(e.ts).slice(0,10)+'  ['+e.kind.toUpperCase()+']'+(s ? ' '+s.letter+' '+s.name : '')+' — '+e.text);
+    });
+    if(!evs.length) lines.push('  (no activity)');
+    lines.push('');
+  });
+  try{ await navigator.clipboard.writeText(lines.join('\n')); toast('Weekly update copied — paste into your email to Mitch'); }
   catch(e){ toast('Copy failed'); }
 };
 

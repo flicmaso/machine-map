@@ -170,6 +170,23 @@
   .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:80; background:var(--ink); color:var(--paper); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:8px 16px; opacity:0; pointer-events:none; transition:opacity .2s;}
   .toast.show{opacity:1;}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+  .small{font-size:11px; color:var(--ink-soft);}
+  .pill{border:1.5px solid; background:#fff; cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; font-weight:600; white-space:nowrap;}
+  .pill.p-open{color:var(--red); border-color:var(--red); background:#F9E7E6;}
+  .pill.p-plan{color:var(--draft); border-color:var(--draft); background:#E8EEF7;}
+  .pill.p-done{color:var(--green-deep); border-color:var(--green); background:#EAF3EA;}
+  .pill.p-ok{color:var(--green-deep); border-color:var(--green); background:#EAF3EA;}
+  .pill.p-watch{color:#7d4f06; border-color:var(--amber); background:#FBF1DC;}
+  .pill.p-issue{color:var(--red); border-color:var(--red); background:#F9E7E6;}
+  .tr-item{display:flex; gap:8px; align-items:flex-start; border:1px solid var(--rule); background:#fff; padding:7px 9px; margin-bottom:6px;}
+  .tr-item .grow{flex:1; min-width:0;}
+  .tr-item .t{font-size:14px;}
+  .tr-item .m{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ink-soft); margin-top:2px;}
+  .tr-item .del{border:none;background:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);text-decoration:underline;padding:0;margin-top:3px;}
+  .insp-sum{font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 9px; border:1px solid var(--rule); background:var(--paper-2); margin-bottom:9px; display:flex; gap:14px; flex-wrap:wrap;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .equip-head{font-size:14px; font-weight:700; border-bottom:1px solid var(--rule); margin:10px 0 6px; padding-bottom:2px;}
+  .filter-chip{font-family:'IBM Plex Mono',monospace; font-size:10px; border:1px solid var(--draft); color:var(--draft); padding:1px 7px; cursor:pointer; background:#E8EEF7;}
 </style>
 </head>
 <body>
@@ -217,11 +234,15 @@
         <button data-st="ok">OK</button><button data-st="watch">WATCH</button>
         <button data-st="issue">ISSUE</button><button data-st="down">DOWN</button>
       </div>
+      <div class="small" id="inspHint" style="margin-top:6px; display:none;"></div>
     </div>
 
     <div class="side-tools">
       <button class="primary" id="addBtn">+ Log entry</button>
       <button id="walkBtn">Walkdown</button>
+      <button id="inspBtn">Bobst insp</button>
+      <button id="drivesBtn">Drives</button>
+      <button id="pumpsBtn">Pumps</button>
       <button id="boardBtn">Fleet board</button>
       <button id="partsBtn">Parts list</button>
       <button id="exportBtn">Copy report</button>
@@ -349,6 +370,48 @@
   </div>
 </div>
 
+<!-- Bobst inspection repairs -->
+<div class="modal-bg" id="inspModal">
+  <div class="modal wide">
+    <h3>Inspection repairs — <span id="inspMach"></span><button class="x" id="inspClose" aria-label="Close">✕</button></h3>
+    <div class="body">
+      <p class="small" style="margin-bottom:9px;">Annual Bobst inspection program (out-of-warranty cutters: 7–11 &amp; 13). Log each recommended repair against its machine section, then walk it from OPEN → PLANNED → DONE. Tap the status pill to advance it.</p>
+      <div class="insp-sum" id="inspSummary"></div>
+      <div id="inspFilterRow" style="margin-bottom:8px; display:none;"></div>
+      <div id="inspList"></div>
+      <div style="border-top:1px solid var(--rule); margin-top:12px; padding-top:10px;">
+        <div class="grid2">
+          <div class="field"><label>Section</label><select id="inspSec"></select></div>
+          <div class="field"><label>Inspection year</label><input id="inspYear" type="number" value="2026"></div>
+        </div>
+        <div class="field"><label>Recommended repair (from Bobst report)</label><textarea id="inspText" placeholder="e.g. Replace gripper bar chain tensioner, see report item 4.2"></textarea></div>
+        <div class="field"><label>Logged by</label><input id="inspWho" placeholder="Initials or name"></div>
+        <div class="actions"><button id="inspCopy">Copy list</button><button class="go" id="inspAdd">Add repair item</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Drives / Pumps registers -->
+<div class="modal-bg" id="equipModal">
+  <div class="modal wide">
+    <h3><span id="equipTitle">Drive list</span><button class="x" id="equipClose" aria-label="Close">✕</button></h3>
+    <div class="body">
+      <p class="small" style="margin-bottom:9px;" id="equipBlurb"></p>
+      <div id="equipList"></div>
+      <div style="border-top:1px solid var(--rule); margin-top:12px; padding-top:10px;">
+        <div class="grid2">
+          <div class="field"><label>Machine</label><select id="equipCutter"></select></div>
+          <div class="field"><label>Name / location</label><input id="equipName" placeholder="e.g. Main drive motor"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Model / part no.</label><input id="equipSpec" placeholder="e.g. ABB ACS880-01-145A-3"></div>
+          <div class="field"><label>Notes</label><input id="equipNotes" placeholder="e.g. spare on shelf, PTI vibration route"></div>
+        </div>
+        <div class="actions"><button id="equipCopy">Copy list</button><button class="go" id="equipAdd">Add item</button></div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="viewer" id="viewer"><img id="viewerImg" alt="Entry photo"></div>
 <div class="toast" id="toast"></div>
 
@@ -393,10 +456,10 @@ let addType = 'update', addPhotoData = null, walk = null;
 
 function blankCutter(){
   const sections = {}; SECTIONS.forEach(s => sections[s.id] = 'ok');
-  return {sections, entries:[], lastWalkdown:null};
+  return {sections, entries:[], insp:[], lastWalkdown:null};
 }
 function blankFleet(){
-  const f = {cutters:{}, author:'', v:1};
+  const f = {cutters:{}, author:'', drives:[], pumps:[], v:2};
   CUTTERS.forEach(c => f.cutters[c] = blankCutter()); return f;
 }
 
@@ -435,9 +498,14 @@ function adoptRows(rows){
     if(rowStamp[row.id] === row.updated_at) return;
     rowStamp[row.id] = row.updated_at;
     if(row.id === 'meta'){ if(row.data && typeof row.data.author === 'string') fleet.author = row.data.author; }
+    else if(row.id === 'drives'){ if(row.data && Array.isArray(row.data.items)) fleet.drives = row.data.items; }
+    else if(row.id === 'pumps'){ if(row.data && Array.isArray(row.data.items)) fleet.pumps = row.data.items; }
     else {
       const c = parseInt(row.id,10);
-      if(CUTTERS.includes(c) && row.data && row.data.sections) fleet.cutters[c] = row.data;
+      if(CUTTERS.includes(c) && row.data && row.data.sections){
+        if(!Array.isArray(row.data.insp)) row.data.insp = [];
+        fleet.cutters[c] = row.data;
+      }
     }
     changed = true;
   });
@@ -447,6 +515,9 @@ function adoptRows(rows){
 async function loadFleet(){
   fleet = cacheGet() || blankFleet();
   CUTTERS.forEach(c => { if(!fleet.cutters[c]) fleet.cutters[c] = blankCutter(); });
+  CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].insp)) fleet.cutters[c].insp = []; });
+  if(!Array.isArray(fleet.drives)) fleet.drives = [];
+  if(!Array.isArray(fleet.pumps)) fleet.pumps = [];
   try{
     adoptRows(await cloudFetchAll());
     cloudOk = true; setChip('ok'); cacheSet();
@@ -463,9 +534,12 @@ function saveFleet(){
 async function pushDirty(){
   if(!dirty.size) return;
   const now = new Date().toISOString();
-  const rows = [...dirty].map(id => id==='meta'
-    ? {id:'meta', data:{author:fleet.author||''}, updated_at:now}
-    : {id, data:fleet.cutters[id], updated_at:now});
+  const rows = [...dirty].map(id => {
+    if(id==='meta') return {id:'meta', data:{author:fleet.author||''}, updated_at:now};
+    if(id==='drives') return {id:'drives', data:{items:fleet.drives||[]}, updated_at:now};
+    if(id==='pumps') return {id:'pumps', data:{items:fleet.pumps||[]}, updated_at:now};
+    return {id, data:fleet.cutters[id], updated_at:now};
+  });
   setChip('saving');
   try{
     await cloudUpsert(rows);
@@ -475,6 +549,12 @@ async function pushDirty(){
     cloudOk = false; setChip('off');
     toast('Offline \u2014 saved on this device, will sync when back online');
   }
+}
+function saveKeys(){
+  for(const k of arguments) dirty.add(k);
+  cacheSet();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushDirty, 400);
 }
 function saveAllCutters(){ CUTTERS.forEach(c => dirty.add(String(c))); dirty.add('meta'); cacheSet(); pushDirty(); }
 
@@ -657,6 +737,10 @@ function renderSide(){
   });
   const due=!cu.lastWalkdown || (Date.now()-cu.lastWalkdown>WEEK_MS);
   $('walkBadge').classList.toggle('show',due);
+  const hint=$('inspHint');
+  const insOpen=(cu.insp||[]).filter(i=>i.st!=='done' && (!curSec || i.sec===curSec));
+  if(curSec && insOpen.length){ hint.style.display='block'; hint.textContent=insOpen.length+' inspection repair'+(insOpen.length>1?'s':'')+' open on this section \u2014 see Bobst insp'; }
+  else hint.style.display='none';
   renderSched(); renderLog();
 }
 
@@ -814,7 +898,7 @@ $('boardBtn').onclick=()=>{
   const t=$('boardTable');
   let h='<tr><th style="text-align:left;">CUTTER</th>';
   SECTIONS.forEach(s=>h+=`<th>${s.letter}</th>`);
-  h+='<th>OPEN</th><th>LAST WALK</th></tr>';
+  h+='<th>OPEN</th><th>INSP</th><th>LAST WALK</th></tr>';
   CUTTERS.forEach(c=>{
     const cu=fleet.cutters[c];
     h+=`<tr><td class="mach" data-c="${c}">#${c} ${NORTH.includes(c)?'N':'S'}</td>`;
@@ -824,7 +908,8 @@ $('boardBtn').onclick=()=>{
     });
     const days=cu.lastWalkdown?Math.floor((Date.now()-cu.lastWalkdown)/86400000):null;
     const due=days===null||days>7;
-    h+=`<td>${openCount(cu)||''}</td><td class="wd${due?' due':''}">${days===null?'never':days+'d ago'}</td></tr>`;
+    const ins=cu.insp||[]; const insDone=ins.filter(i=>i.st==='done').length;
+    h+=`<td>${openCount(cu)||''}</td><td class="wd">${ins.length?insDone+'/'+ins.length:''}</td><td class="wd${due?' due':''}">${days===null?'never':days+'d ago'}</td></tr>`;
   });
   t.innerHTML=h;
   t.querySelectorAll('.cell, .mach').forEach(el=>{
@@ -892,6 +977,15 @@ $('exportBtn').onclick=async()=>{
   const recent=cu.entries.filter(e=>e.type==='update'||e.type==='pm').sort((a,b)=>b.ts-a.ts).slice(0,10);
   lines.push(''); lines.push('RECENT UPDATES / PM');
   recent.forEach(e=>{ const s=secById(e.sec); lines.push(`  ${fmtDate(e.ts)}  ${s.letter} ${s.name} \u2014 ${e.text}`); });
+  const ins=(cu.insp||[]).slice().sort((a,b)=>(b.y||0)-(a.y||0));
+  if(ins.length){
+    const dn=ins.filter(i=>i.st==='done').length;
+    lines.push(''); lines.push(`BOBST INSPECTION REPAIRS (${dn}/${ins.length} done)`);
+    ins.forEach(it=>{ const s=secById(it.sec);
+      const st=it.st==='done' ? 'DONE'+(it.done?' '+fmtDate(it.done).slice(0,10):'') : it.st==='plan' ? 'PLANNED' : 'OPEN';
+      lines.push(`  [${it.y||''}] ${s?s.letter+' '+s.name:''} \u2014 ${it.text}  :: ${st}`);
+    });
+  }
   const sched=BOBST_SCHEDULE[curCutter];
   if(sched){
     const today=new Date().toISOString().slice(0,10);
@@ -951,6 +1045,156 @@ $('importFile').addEventListener('change', e=>{
   };
   r.readAsText(f);
 });
+
+/* ================= Bobst inspection repairs ================= */
+function fillSecSelect(sel){
+  sel.innerHTML='';
+  SECTIONS.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.letter+' \u2014 '+s.name; sel.appendChild(o); });
+}
+let inspSecFilter=null;
+function openInsp(){
+  inspSecFilter=curSec;
+  $('inspMach').textContent='Cutter '+curCutter;
+  fillSecSelect($('inspSec'));
+  if(curSec) $('inspSec').value=curSec;
+  $('inspText').value=''; $('inspWho').value=fleet.author||'';
+  renderInsp(); $('inspModal').classList.add('open');
+}
+function renderInsp(){
+  const cu=fleet.cutters[curCutter];
+  const all=(cu.insp||[]).slice().sort((a,b)=>((b.y||0)-(a.y||0)) || ((a.st==='done')-(b.st==='done')));
+  const years={};
+  all.forEach(i=>{ const y=i.y||'?'; years[y]=years[y]||{t:0,d:0}; years[y].t++; if(i.st==='done') years[y].d++; });
+  $('inspSummary').innerHTML = Object.keys(years).sort().reverse()
+    .map(y=>`<span><b>${y}:</b> ${years[y].d}/${years[y].t} done</span>`).join('') || '<span>No inspection repairs logged yet \u2014 add them from this year\u2019s Bobst report below.</span>';
+  const fr=$('inspFilterRow');
+  if(inspSecFilter){ const s=secById(inspSecFilter);
+    fr.style.display='block';
+    fr.innerHTML=`Showing only: <span class="filter-chip" id="inspClearFilter">${s.letter} ${s.name} \u2715 clear</span>`;
+    document.getElementById('inspClearFilter').onclick=()=>{ inspSecFilter=null; renderInsp(); };
+  } else fr.style.display='none';
+  const list=inspSecFilter ? all.filter(i=>i.sec===inspSecFilter) : all;
+  const box=$('inspList'); box.innerHTML='';
+  if(!list.length){ box.innerHTML='<div class="empty">Nothing here yet.</div>'; return; }
+  list.forEach(it=>{
+    const s=secById(it.sec);
+    const d=document.createElement('div'); d.className='tr-item';
+    const stLabel=it.st==='done'?'DONE':it.st==='plan'?'PLANNED':'OPEN';
+    d.innerHTML=`<div class="grow"><div class="t">${esc(it.text)}</div>`+
+      `<div class="m">${it.y||''} \u00B7 ${s?s.letter+' '+s.name:''}${it.who?' \u00B7 '+esc(it.who):''}${it.st==='done'&&it.done?' \u00B7 done '+fmtDate(it.done).slice(0,10):''}</div></div>`+
+      `<button class="pill p-${it.st}">${stLabel}</button><button class="del">del</button>`;
+    d.querySelector('.pill').onclick=()=>{
+      it.st = it.st==='open' ? 'plan' : it.st==='plan' ? 'done' : 'open';
+      it.done = it.st==='done' ? Date.now() : null;
+      saveFleet(); renderInsp(); renderAll();
+    };
+    d.querySelector('.del').onclick=()=>{
+      if(!confirm('Delete this repair item?')) return;
+      cu.insp=cu.insp.filter(x=>x.id!==it.id); saveFleet(); renderInsp(); renderAll();
+    };
+    box.appendChild(d);
+  });
+}
+$('inspBtn').onclick=openInsp;
+$('inspClose').onclick=()=>{ $('inspModal').classList.remove('open'); renderAll(); };
+$('inspAdd').onclick=()=>{
+  const text=$('inspText').value.trim();
+  if(!text){ toast('Describe the repair first'); return; }
+  fleet.author=$('inspWho').value.trim();
+  const cu=fleet.cutters[curCutter];
+  cu.insp=cu.insp||[];
+  cu.insp.push({ id:Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    y:parseInt($('inspYear').value,10)||new Date().getFullYear(),
+    sec:$('inspSec').value, text, who:fleet.author, st:'open', done:null });
+  $('inspText').value='';
+  saveFleet(); renderInsp(); renderAll(); toast('Repair item added');
+};
+$('inspCopy').onclick=async()=>{
+  const cu=fleet.cutters[curCutter];
+  const ins=(cu.insp||[]).slice().sort((a,b)=>(b.y||0)-(a.y||0));
+  const lines=[`BOBST INSPECTION REPAIRS \u2014 CUTTER ${curCutter} \u2014 `+new Date().toISOString().slice(0,10).replace(/-/g,'.'),''];
+  ins.forEach(it=>{ const s=secById(it.sec);
+    const st=it.st==='done'?'DONE'+(it.done?' '+fmtDate(it.done).slice(0,10):''):it.st==='plan'?'PLANNED':'OPEN';
+    lines.push(`  [${it.y||''}] ${s?s.letter+' '+s.name:''} \u2014 ${it.text}  :: ${st}`);
+  });
+  if(!ins.length) lines.push('(none)');
+  try{ await navigator.clipboard.writeText(lines.join('\n')); toast('Inspection list copied'); }
+  catch(e){ toast('Copy failed'); }
+};
+
+/* ================= drives & pumps registers ================= */
+let equipKind='drives';
+function openEquip(kind){
+  equipKind=kind;
+  $('equipTitle').textContent = kind==='drives' ? 'Drive list \u2014 fleet' : 'Pump list \u2014 fleet';
+  $('equipBlurb').textContent = kind==='drives'
+    ? 'Every drive across the 10 cutters \u2014 model, location, condition. Tap the status pill to cycle OK / WATCH / ISSUE.'
+    : 'Every pump across the 10 cutters \u2014 model, location, condition. Tap the status pill to cycle OK / WATCH / ISSUE.';
+  const sel=$('equipCutter'); sel.innerHTML='';
+  const og=document.createElement('option'); og.value='0'; og.textContent='Plant / general'; sel.appendChild(og);
+  CUTTERS.forEach(c=>{ const o=document.createElement('option'); o.value=String(c); o.textContent='Cutter '+c; sel.appendChild(o); });
+  sel.value=String(curCutter);
+  $('equipName').value=''; $('equipSpec').value=''; $('equipNotes').value='';
+  renderEquip(); $('equipModal').classList.add('open');
+}
+function renderEquip(){
+  const items=fleet[equipKind]||[];
+  const box=$('equipList'); box.innerHTML='';
+  if(!items.length){
+    box.innerHTML='<div class="empty">Empty \u2014 add the first '+(equipKind==='drives'?'drive':'pump')+' below. Everything you add syncs to the whole crew.</div>';
+    return;
+  }
+  const groups={};
+  items.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
+  Object.keys(groups).sort((a,b)=>a-b).forEach(k=>{
+    const head=document.createElement('div'); head.className='equip-head';
+    head.textContent = k==='0' ? 'Plant / general' : 'Cutter '+k+' ('+(NORTH.includes(parseInt(k,10))?'North':'South')+')';
+    box.appendChild(head);
+    groups[k].forEach(it=>{
+      const d=document.createElement('div'); d.className='tr-item';
+      d.innerHTML=`<div class="grow"><div class="t"><b>${esc(it.name)}</b>${it.spec?' \u00B7 <span class="mono" style="font-size:11px;">'+esc(it.spec)+'</span>':''}</div>`+
+        (it.notes?`<div class="m">${esc(it.notes)}</div>`:'')+`</div>`+
+        `<button class="pill p-${it.st}">${it.st.toUpperCase()}</button><button class="del">del</button>`;
+      d.querySelector('.pill').onclick=()=>{
+        it.st = it.st==='ok' ? 'watch' : it.st==='watch' ? 'issue' : 'ok';
+        saveKeys(equipKind); renderEquip();
+      };
+      d.querySelector('.del').onclick=()=>{
+        if(!confirm('Delete this item?')) return;
+        fleet[equipKind]=fleet[equipKind].filter(x=>x.id!==it.id);
+        saveKeys(equipKind); renderEquip();
+      };
+      box.appendChild(d);
+    });
+  });
+}
+$('drivesBtn').onclick=()=>openEquip('drives');
+$('pumpsBtn').onclick=()=>openEquip('pumps');
+$('equipClose').onclick=()=>$('equipModal').classList.remove('open');
+$('equipAdd').onclick=()=>{
+  const name=$('equipName').value.trim();
+  if(!name){ toast('Name the item first'); return; }
+  fleet[equipKind]=fleet[equipKind]||[];
+  fleet[equipKind].push({ id:Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    c:parseInt($('equipCutter').value,10)||0, name,
+    spec:$('equipSpec').value.trim(), notes:$('equipNotes').value.trim(), st:'ok' });
+  $('equipName').value=''; $('equipSpec').value=''; $('equipNotes').value='';
+  saveKeys(equipKind); renderEquip(); toast('Added to '+(equipKind==='drives'?'drive':'pump')+' list');
+};
+$('equipCopy').onclick=async()=>{
+  const items=fleet[equipKind]||[];
+  const lines=[(equipKind==='drives'?'DRIVE LIST':'PUMP LIST')+' \u2014 MASTERCUT FLEET \u2014 '+new Date().toISOString().slice(0,10).replace(/-/g,'.'),''];
+  const groups={};
+  items.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
+  Object.keys(groups).sort((a,b)=>a-b).forEach(k=>{
+    lines.push(k==='0'?'PLANT / GENERAL':'CUTTER '+k);
+    groups[k].forEach(it=>lines.push(`  ${it.name}${it.spec?' \u00B7 '+it.spec:''}  [${it.st.toUpperCase()}]${it.notes?' \u2014 '+it.notes:''}`));
+    lines.push('');
+  });
+  if(!items.length) lines.push('(empty)');
+  try{ await navigator.clipboard.writeText(lines.join('\n')); toast('List copied'); }
+  catch(e){ toast('Copy failed'); }
+};
 
 /* ================= boot ================= */
 (async function(){

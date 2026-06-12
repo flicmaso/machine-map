@@ -176,6 +176,7 @@
   .pill.p-open{color:var(--red); border-color:var(--red); background:#F9E7E6;}
   .pill.p-plan{color:var(--draft); border-color:var(--draft); background:#E8EEF7;}
   .pill.p-done{color:var(--green-deep); border-color:var(--green); background:#EAF3EA;}
+  .pill.p-na{color:var(--ink-soft); border-color:var(--rule); background:var(--paper-2);}
   .pill.p-ok{color:var(--green-deep); border-color:var(--green); background:#EAF3EA;}
   .pill.p-watch{color:#7d4f06; border-color:var(--amber); background:#FBF1DC;}
   .pill.p-issue{color:var(--red); border-color:var(--red); background:#F9E7E6;}
@@ -427,6 +428,7 @@
         <button data-k="drives">DRIVES</button>
         <button data-k="pumps">PUMPS</button>
         <button data-k="motors">MOTORS</button>
+        <button data-k="upg">UPGRADES</button>
         <button data-k="sw">SOFTWARE</button>
       </div>
       <div id="equipFilterRow" style="display:none; margin-bottom:8px;"></div>
@@ -531,6 +533,8 @@ const BOBST_SCHEDULE = {
       {s:'2026-09-21', e:'2026-09-30', label:'Bobst inspection \u2014 Darrell Green'} ]
 };
 
+const SEED_UPG = [{"id":"upg-7-G1D","c":7,"m":"G1D","name":"Main Motor / Drive Machine","gbp":"Schneider Altivar ATV71 - 30.00KW- ATV71HD30N4Z","pn":"SP0566UPG0182 / SP0566UPG0183 / SP0566UPG0184","loc":"Schneider Altivar ATV340","work":"","lead":"2 wk","cost":"$53,222","notes":"Equipment #: BSA05662000157 SP0566UPG0182: $22,997 / SP0566UPG0183: $14,088 / SP0566UPG0184: $16,137","st":"avail"},{"id":"upg-7-G10D","c":7,"m":"G10D","name":"Plate Feeder / Pile Height","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"","loc":"","work":"","lead":"","cost":"","notes":"Not available for this cutter per Bobst quotation","st":"na"},{"id":"upg-7-G11D","c":7,"m":"G11D","name":"Lift & Lower NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0180","loc":"Schneider Altivar ATV340","work":"","lead":"12 wk","cost":"$12,166","notes":"","st":"avail"},{"id":"upg-7-G12D","c":7,"m":"G12D","name":"Feed & Withdraw NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0170","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$8,272","notes":"","st":"avail"},{"id":"upg-7-G13D","c":7,"m":"G13D","name":"Drive Suction Unit (Feed Head)","gbp":"","pn":"SP0566UPG0205 (Ordered 4/28/26) / SP0566UPG0206 / SP0566UPG0207","loc":"Baumuller / Control Techniques Unidrive SP / Control Techniques Unidrive M701","work":"","lead":"","cost":"$1,532","notes":"Re-programming options - SP0566UPG0205: $475.86 / SP0566UPG0206: $679.83 / SP0566UPG0207: $376.33","st":"ordered"},{"id":"upg-7-G20D-G21D","c":7,"m":"G20D-G21D","name":"Position Sheet Longitudinal","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-7-G22D","c":7,"m":"G22D","name":"Position Sheet Lateral","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-7-G23D","c":7,"m":"G23D","name":"Pressure Throw In","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0171","loc":"Schneider Altivar ATV320","work":"","lead":"10 wk","cost":"$14,512","notes":"","st":"avail"},{"id":"upg-7-G35D","c":7,"m":"G35D","name":"Bernoulli Tablet (Strip Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0178","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$11,597","notes":"","st":"avail"},{"id":"upg-7-G40D","c":7,"m":"G40D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 7.5KW IP20","pn":"SP0566UPG0165","loc":"Schneider Altivar ATV340","work":"","lead":"16 wk","cost":"$15,156","notes":"","st":"avail"},{"id":"upg-7-G41D","c":7,"m":"G41D","name":"Lift & Lower NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW IP20","pn":"SP0566UPG0181","loc":"Schneider Altivar ATV340","work":"","lead":"14 wk","cost":"$14,692","notes":"","st":"avail"},{"id":"upg-7-G42D","c":7,"m":"G42D","name":"Feed & Withdraw NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0172 / SP0566UPG0175","loc":"Schneider Altivar ATV320","work":"","lead":"11 wk","cost":"$18,025","notes":"SP0566UPG0172: $11,195 / SP0566UPG0175: $6,830","st":"avail"},{"id":"upg-7-G44D","c":7,"m":"G44D","name":"Removal Conveyor Belt Waste","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0173 / SP0566UPG0176","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$22,900","notes":"SP0566UPG0173: $10,987 / SP0566UPG0176: $11,913","st":"avail"},{"id":"upg-7-G45D","c":7,"m":"G45D","name":"Bernoulli Tablet (Blank Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0179","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$9,443","notes":"","st":"avail"},{"id":"upg-7-G46D","c":7,"m":"G46D","name":"Tighten Sheet With Brush (Breaking Brush)","gbp":"","pn":"SP0566UPG0212 / SP0566UPG0213 / SP0566UPG0214","loc":"Control Techniques Unidrive SP / Control Techniques Unidrive M / Baumuller","work":"","lead":"","cost":"","notes":"Re-programming options - pricing not in Bobst quotation","st":"avail"},{"id":"upg-7-G47D","c":7,"m":"G47D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0190","loc":"Schneider Altivar ATV320","work":"","lead":"","cost":"$4,536","notes":"","st":"avail"},{"id":"upg-8-G1D","c":8,"m":"G1D","name":"Main Motor / Drive Machine","gbp":"Schneider Altivar ATV71 - 30.00KW","pn":"SP0566UPG0182 / SP0566UPG0183 / SP0566UPG0184","loc":"Schneider Altivar ATV340","work":"","lead":"2 wk","cost":"$53,222","notes":"Equipment #: BSA05662000013 SP0566UPG0182: $22,997 / SP0566UPG0183: $14,088 / SP0566UPG0184: $16,137","st":"avail"},{"id":"upg-8-G10D","c":8,"m":"G10D","name":"Plate Feeder / Pile Height","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0164","loc":"Schneider Altivar ATV340","work":"","lead":"11 wk","cost":"$12,907","notes":"","st":"avail"},{"id":"upg-8-G11D","c":8,"m":"G11D","name":"Lift & Lower NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0180","loc":"Schneider Altivar ATV340","work":"","lead":"12 wk","cost":"$12,166","notes":"","st":"avail"},{"id":"upg-8-G12D","c":8,"m":"G12D","name":"Feed & Withdraw NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0170","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$8,272","notes":"","st":"avail"},{"id":"upg-8-G13D","c":8,"m":"G13D","name":"Drive Suction Unit (Feed Head)","gbp":"","pn":"SP0566UPG0205 / SP0566UPG0206 / SP0566UPG0207","loc":"Baumuller / Control Techniques Unidrive SP / Control Techniques Unidrive M701","work":"","lead":"","cost":"$1,532","notes":"Re-programming options - SP0566UPG0205: $475.86 / SP0566UPG0206: $679.83 / SP0566UPG0207: $376.33","st":"avail"},{"id":"upg-8-G20D-G21D","c":8,"m":"G20D-G21D","name":"Position Sheet Longitudinal","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-8-G22D","c":8,"m":"G22D","name":"Position Sheet Lateral","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-8-G23D","c":8,"m":"G23D","name":"Pressure Throw In","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0171","loc":"Schneider Altivar ATV320","work":"","lead":"10 wk","cost":"$14,512","notes":"","st":"avail"},{"id":"upg-8-G35D","c":8,"m":"G35D","name":"Bernoulli Tablet (Strip Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0178","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$11,597","notes":"","st":"avail"},{"id":"upg-8-G40D","c":8,"m":"G40D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 7.5KW IP20","pn":"SP0566UPG0165","loc":"Schneider Altivar ATV340","work":"","lead":"16 wk","cost":"$15,156","notes":"","st":"avail"},{"id":"upg-8-G41D","c":8,"m":"G41D","name":"Lift & Lower NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW IP20","pn":"SP0566UPG0181","loc":"Schneider Altivar ATV340","work":"","lead":"14 wk","cost":"$14,692","notes":"","st":"avail"},{"id":"upg-8-G42D","c":8,"m":"G42D","name":"Feed & Withdraw NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0172 / SP0566UPG0175","loc":"Schneider Altivar ATV320","work":"","lead":"11 wk","cost":"$18,025","notes":"SP0566UPG0172: $11,195 / SP0566UPG0175: $6,830","st":"avail"},{"id":"upg-8-G44D","c":8,"m":"G44D","name":"Removal Conveyor Belt Waste","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0173 / SP0566UPG0176","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$22,900","notes":"SP0566UPG0173: $10,987 / SP0566UPG0176: $11,913","st":"avail"},{"id":"upg-8-G45D","c":8,"m":"G45D","name":"Bernoulli Tablet (Blank Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0179","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$9,443","notes":"","st":"avail"},{"id":"upg-8-G46D","c":8,"m":"G46D","name":"Tighten Sheet With Brush (Breaking Brush)","gbp":"","pn":"SP0566UPG0212 / SP0566UPG0213 / SP0566UPG0214","loc":"Control Techniques Unidrive SP / Control Techniques Unidrive M / Baumuller","work":"","lead":"","cost":"","notes":"","st":"avail"},{"id":"upg-8-G47D","c":8,"m":"G47D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0190","loc":"Schneider Altivar ATV320","work":"","lead":"","cost":"$4,536","notes":"","st":"avail"},{"id":"upg-9-G1D","c":9,"m":"G1D","name":"Main Motor / Drive Machine","gbp":"Schneider Altivar ATV71 - 30.00KW","pn":"SP0566UPG0182 / SP0566UPG0183 / SP0566UPG0184","loc":"Schneider Altivar ATV340","work":"","lead":"2 wk","cost":"$53,222","notes":"Equipment #: BSA05662000014 SP0566UPG0182: $22,997 / SP0566UPG0183: $14,088 / SP0566UPG0184: $16,137","st":"avail"},{"id":"upg-9-G10D","c":9,"m":"G10D","name":"Plate Feeder / Pile Height","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0164","loc":"Schneider Altivar ATV340","work":"","lead":"11 wk","cost":"$12,907","notes":"","st":"avail"},{"id":"upg-9-G11D","c":9,"m":"G11D","name":"Lift & Lower NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0180","loc":"Schneider Altivar ATV340","work":"","lead":"12 wk","cost":"$12,166","notes":"","st":"avail"},{"id":"upg-9-G12D","c":9,"m":"G12D","name":"Feed & Withdraw NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0170","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$8,272","notes":"","st":"avail"},{"id":"upg-9-G13D","c":9,"m":"G13D","name":"Drive Suction Unit (Feed Head)","gbp":"","pn":"SP0566UPG0205 / SP0566UPG0206 / SP0566UPG0207","loc":"Baumuller / Control Techniques Unidrive SP / Control Techniques Unidrive M701","work":"","lead":"","cost":"$1,532","notes":"Re-programming options -SP0566UPG0205: $475.86 / SP0566UPG0206: $679.83 / SP0566UPG0207: $376.33","st":"avail"},{"id":"upg-9-G20D-G21D","c":9,"m":"G20D-G21D","name":"Position Sheet Longitudinal","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-9-G22D","c":9,"m":"G22D","name":"Position Sheet Lateral","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-9-G23D","c":9,"m":"G23D","name":"Pressure Throw In","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0171","loc":"Schneider Altivar ATV320","work":"","lead":"10 wk","cost":"$14,512","notes":"","st":"avail"},{"id":"upg-9-G35D","c":9,"m":"G35D","name":"Bernoulli Tablet (Strip Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0178","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$11,597","notes":"","st":"avail"},{"id":"upg-9-G40D","c":9,"m":"G40D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 7.5KW IP20","pn":"SP0566UPG0165","loc":"Schneider Altivar ATV340","work":"","lead":"16 wk","cost":"$15,156","notes":"","st":"avail"},{"id":"upg-9-G41D","c":9,"m":"G41D","name":"Lift & Lower NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW IP20","pn":"SP0566UPG0181","loc":"Schneider Altivar ATV340","work":"","lead":"14 wk","cost":"$14,692","notes":"","st":"avail"},{"id":"upg-9-G42D","c":9,"m":"G42D","name":"Feed & Withdraw NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0172 / SP0566UPG0175","loc":"Schneider Altivar ATV320","work":"","lead":"11 wk","cost":"$18,025","notes":"SP0566UPG0172: $11,195 / SP0566UPG0175: $6,830","st":"avail"},{"id":"upg-9-G44D","c":9,"m":"G44D","name":"Removal Conveyor Belt Waste","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0173 / SP0566UPG0176","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$22,900","notes":"SP0566UPG0173: $10,987 / SP0566UPG0176: $11,913","st":"avail"},{"id":"upg-9-G45D","c":9,"m":"G45D","name":"Bernoulli Tablet (Blank Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0179","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$9,443","notes":"","st":"avail"},{"id":"upg-9-G46D","c":9,"m":"G46D","name":"Tighten Sheet With Brush (Breaking Brush)","gbp":"","pn":"SP0566UPG0212 / SP0566UPG0213 / SP0566UPG0214","loc":"Control Techniques Unidrive SP / Control Techniques Unidrive M / Baumuller","work":"","lead":"","cost":"","notes":"Re-programming options","st":"avail"},{"id":"upg-9-G47D","c":9,"m":"G47D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0190","loc":"Schneider Altivar ATV320","work":"","lead":"","cost":"$4,536","notes":"","st":"avail"},{"id":"upg-10-G1D","c":10,"m":"G1D","name":"Main Motor / Drive Machine","gbp":"Schneider Altivar ATV71 - 30.00KW","pn":"SP0566UPG0183 / SP0566UPG0184","loc":"Schneider Altivar ATV340","work":"","lead":"2 wk","cost":"$30,225","notes":"Equipment #: BSA05662000134 SP0566UPG0183: $14,088 / SP0566UPG0184: $16,137","st":"avail"},{"id":"upg-10-G10D","c":10,"m":"G10D","name":"Plate Feeder / Pile Height","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"","loc":"","work":"","lead":"","cost":"","notes":"Not available for this cutter","st":"na"},{"id":"upg-10-G11D","c":10,"m":"G11D","name":"Lift & Lower NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0180","loc":"Schneider Altivar ATV340","work":"","lead":"12 wk","cost":"$12,166","notes":"","st":"avail"},{"id":"upg-10-G12D","c":10,"m":"G12D","name":"Feed & Withdraw NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0170","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$8,272","notes":"","st":"avail"},{"id":"upg-10-G13D","c":10,"m":"G13D","name":"Drive Suction Unit (Feed Head)","gbp":"","pn":"SP0566UPG0205 / SP0566UPG0206 / SP0566UPG0207","loc":"Baumuller / Control Techniques Unidrive SP / Control Techniques Unidrive M701","work":"","lead":"","cost":"$1,532","notes":"Re-programming options - SP0566UPG0205: $475.86 / SP0566UPG0206: $679.83 / SP0566UPG0207: $376.33","st":"avail"},{"id":"upg-10-G20D-G21D","c":10,"m":"G20D-G21D","name":"Position Sheet Longitudinal","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-10-G22D","c":10,"m":"G22D","name":"Position Sheet Lateral","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-10-G23D","c":10,"m":"G23D","name":"Pressure Throw In","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0171","loc":"Schneider Altivar ATV320","work":"","lead":"10 wk","cost":"$14,512","notes":"","st":"avail"},{"id":"upg-10-G35D","c":10,"m":"G35D","name":"Bernoulli Tablet (Strip Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0178","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$11,597","notes":"","st":"avail"},{"id":"upg-10-G40D","c":10,"m":"G40D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 7.5KW IP20","pn":"SP0566UPG0165","loc":"Schneider Altivar ATV340","work":"","lead":"16 wk","cost":"$15,156","notes":"","st":"avail"},{"id":"upg-10-G41D","c":10,"m":"G41D","name":"Lift & Lower NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW IP20","pn":"SP0566UPG0181","loc":"Schneider Altivar ATV340","work":"","lead":"14 wk","cost":"$14,692","notes":"","st":"avail"},{"id":"upg-10-G42D","c":10,"m":"G42D","name":"Feed & Withdraw NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0172 / SP0566UPG0175","loc":"Schneider Altivar ATV320","work":"","lead":"11 wk","cost":"$18,025","notes":"SP0566UPG0172: $11,195 / SP0566UPG0175: $6,830","st":"avail"},{"id":"upg-10-G44D","c":10,"m":"G44D","name":"Removal Conveyor Belt Waste","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0173 / SP0566UPG0176","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$22,900","notes":"SP0566UPG0173: $10,987 / SP0566UPG0176: $11,913","st":"avail"},{"id":"upg-10-G45D","c":10,"m":"G45D","name":"Bernoulli Tablet (Blank Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0179","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$9,443","notes":"","st":"avail"},{"id":"upg-10-G46D","c":10,"m":"G46D","name":"Tighten Sheet With Brush (Breaking Brush)","gbp":"","pn":"SP0566UPG0212 / SP0566UPG0213 / SP0566UPG0214","loc":"Control Techniques Unidrive SP / Control Techniques Unidrive M / Baumuller","work":"","lead":"","cost":"","notes":"Re-programming options","st":"avail"},{"id":"upg-10-G47D","c":10,"m":"G47D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0190","loc":"Schneider Altivar ATV320","work":"","lead":"","cost":"$4,536","notes":"","st":"avail"},{"id":"upg-11-G1D","c":11,"m":"G1D","name":"Main Motor / Drive Machine","gbp":"Schneider Altivar ATV71 - 30.00KW","pn":"SP0566UPG0182 / SP0566UPG0183 / SP0566UPG0184","loc":"Schneider Altivar ATV340","work":"","lead":"2 wk","cost":"$53,222","notes":"Equipment #: BSA05662000180 SP0566UPG0182: $22,997 / SP0566UPG0183: $14,088 / SP0566UPG0184: $16,137","st":"avail"},{"id":"upg-11-G10D","c":11,"m":"G10D","name":"Plate Feeder / Pile Height","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0164","loc":"Schneider Altivar ATV340","work":"","lead":"11 wk","cost":"$12,907","notes":"","st":"avail"},{"id":"upg-11-G11D","c":11,"m":"G11D","name":"Lift & Lower NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0180","loc":"Schneider Altivar ATV340","work":"","lead":"12 wk","cost":"$12,166","notes":"","st":"avail"},{"id":"upg-11-G12D","c":11,"m":"G12D","name":"Feed & Withdraw NS Feeder","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0170","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$8,272","notes":"","st":"avail"},{"id":"upg-11-G13D","c":11,"m":"G13D","name":"Drive Suction Unit (Feed Head)","gbp":"","pn":"SP0566UPG0205 / SP0566UPG0206 / SP0566UPG0207","loc":"Baumuller / Control Techniques Unidrive SP / Control Techniques Unidrive M701","work":"","lead":"","cost":"$1,532","notes":"Re-programming options - SP0566UPG0205: $475.86 / SP0566UPG0206: $679.83 / SP0566UPG0207: $376.33","st":"avail"},{"id":"upg-11-G20D-G21D","c":11,"m":"G20D-G21D","name":"Position Sheet Longitudinal","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-11-G22D","c":11,"m":"G22D","name":"Position Sheet Lateral","gbp":"","pn":"","loc":"","work":"","lead":"","cost":"","notes":"No drive upgrade listed in catalog","st":"na"},{"id":"upg-11-G23D","c":11,"m":"G23D","name":"Pressure Throw In","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0171","loc":"Schneider Altivar ATV320","work":"","lead":"10 wk","cost":"$14,512","notes":"","st":"avail"},{"id":"upg-11-G35D","c":11,"m":"G35D","name":"Bernoulli Tablet (Strip Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0178","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$11,597","notes":"","st":"avail"},{"id":"upg-11-G40D","c":11,"m":"G40D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 7.5KW IP20","pn":"SP0566UPG0165","loc":"Schneider Altivar ATV340","work":"","lead":"16 wk","cost":"$15,156","notes":"","st":"avail"},{"id":"upg-11-G41D","c":11,"m":"G41D","name":"Lift & Lower NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW IP20","pn":"SP0566UPG0181","loc":"Schneider Altivar ATV340","work":"","lead":"14 wk","cost":"$14,692","notes":"","st":"avail"},{"id":"upg-11-G42D","c":11,"m":"G42D","name":"Feed & Withdraw NS Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0172 / SP0566UPG0175","loc":"Schneider Altivar ATV320","work":"","lead":"11 wk","cost":"$18,025","notes":"SP0566UPG0172: $11,195 / SP0566UPG0175: $6,830","st":"avail"},{"id":"upg-11-G44D","c":11,"m":"G44D","name":"Removal Conveyor Belt Waste","gbp":"Schneider Altivar ATV71 - 0.75KW / 0.75KW IP20","pn":"SP0566UPG0173 / SP0566UPG0176","loc":"Schneider Altivar ATV320","work":"","lead":"14 wk","cost":"$22,900","notes":"SP0566UPG0173: $10,987 / SP0566UPG0176: $11,913","st":"avail"},{"id":"upg-11-G45D","c":11,"m":"G45D","name":"Bernoulli Tablet (Blank Station Pump)","gbp":"Schneider Altivar ATV71 - 7.50KW","pn":"SP0566UPG0179","loc":"Schneider Altivar ATV320","work":"","lead":"12 wk","cost":"$9,443","notes":"","st":"avail"},{"id":"upg-11-G46D","c":11,"m":"G46D","name":"Tighten Sheet With Brush (Breaking Brush)","gbp":"","pn":"SP0566UPG0212 / SP0566UPG0213 / SP0566UPG0214","loc":"Control Techniques Unidrive SP / Control Techniques Unidrive M / Baumuller","work":"","lead":"","cost":"","notes":"Re-programming options","st":"avail"},{"id":"upg-11-G47D","c":11,"m":"G47D","name":"Plate Delivery","gbp":"Schneider Altivar ATV71 - 0.75KW","pn":"SP0566UPG0190","loc":"Schneider Altivar ATV320","work":"","lead":"","cost":"$4,536","notes":"","st":"avail"}];
+
 let fleet = null, curCutter = 7, curSec = null, curFilter = 'all', curSearch = '';
 let addType = 'update', addPhotoData = null, walk = null;
 
@@ -539,7 +543,7 @@ function blankCutter(){
   return {sections, entries:[], insp:[], notes:[], dt:[], lastWalkdown:null};
 }
 function blankFleet(){
-  const f = {cutters:{}, author:'', drives:[], pumps:[], motors:[], sw:[], txt:{}, v:5};
+  const f = {cutters:{}, author:'', drives:[], pumps:[], motors:[], sw:[], upg:[], txt:{}, v:6};
   CUTTERS.forEach(c => f.cutters[c] = blankCutter()); return f;
 }
 
@@ -583,6 +587,7 @@ function adoptRows(rows){
     else if(row.id === 'txt'){ if(row.data && row.data.map) fleet.txt = row.data.map; }
     else if(row.id === 'sw'){ if(row.data && Array.isArray(row.data.items)) fleet.sw = row.data.items; }
     else if(row.id === 'motors'){ if(row.data && Array.isArray(row.data.items)) fleet.motors = row.data.items; }
+    else if(row.id === 'upg'){ if(row.data && Array.isArray(row.data.items)) fleet.upg = row.data.items; }
     else {
       const c = parseInt(row.id,10);
       if(CUTTERS.includes(c) && row.data && row.data.sections){
@@ -606,12 +611,18 @@ async function loadFleet(){
   if(!fleet.txt || typeof fleet.txt !== 'object') fleet.txt = {};
   if(!Array.isArray(fleet.sw)) fleet.sw = [];
   if(!Array.isArray(fleet.motors)) fleet.motors = [];
+  if(!Array.isArray(fleet.upg)) fleet.upg = [];
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].notes)) fleet.cutters[c].notes = []; });
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].dt)) fleet.cutters[c].dt = []; });
   try{
     adoptRows(await cloudFetchAll());
     cloudOk = true; setChip('ok'); cacheSet();
   }catch(e){ cloudOk = false; setChip('off'); }
+  if(!rowStamp['upg'] && (!fleet.upg || !fleet.upg.length)){
+    fleet.upg = SEED_UPG.slice();
+    dirty.add('upg'); cacheSet();
+    if(cloudOk) pushDirty();
+  }
 }
 
 let saveTimer = null; const dirty = new Set();
@@ -631,6 +642,7 @@ async function pushDirty(){
     if(id==='txt') return {id:'txt', data:{map:fleet.txt||{}}, updated_at:now};
     if(id==='sw') return {id:'sw', data:{items:fleet.sw||[]}, updated_at:now};
     if(id==='motors') return {id:'motors', data:{items:fleet.motors||[]}, updated_at:now};
+    if(id==='upg') return {id:'upg', data:{items:fleet.upg||[]}, updated_at:now};
     return {id, data:fleet.cutters[id], updated_at:now};
   });
   setChip('saving');
@@ -728,8 +740,8 @@ function buildMachine(){
     g.addEventListener('click', e => { e.stopPropagation(); handleSecTap(s.id); });
     g.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectSection(s.id);} });
   });
-  const EQ_GEOM = { drives:{x:410,y:28,w:380,h:180}, pumps:{x:850,y:28,w:380,h:180}, motors:{x:1290,y:28,w:380,h:180} };
-  [['drives','DRIVES'],['pumps','PUMPS · W'],['motors','MOTORS']].forEach(pair => {
+  const EQ_GEOM = { drives:{x:365,y:28,w:330,h:180}, pumps:{x:745,y:28,w:330,h:180}, motors:{x:1125,y:28,w:330,h:180}, upg:{x:1505,y:28,w:330,h:180} };
+  [['drives','DRIVES'],['pumps','PUMPS · W'],['motors','MOTORS'],['upg','UPGRADES']].forEach(pair => {
     const k=pair[0], lab=pair[1], gm=EQ_GEOM[k];
     const g=el('g',{class:'eqbox','data-eq':k,tabindex:'0',role:'button','aria-label':lab+' register'});
     el('rect',{x:gm.x,y:gm.y,width:gm.w,height:gm.h,rx:10,class:'eqrect'},g);
@@ -832,6 +844,9 @@ function renderMachine(){
     const t=document.querySelector('[data-eqcount="'+k+'"]');
     if(t) t.textContent = n ? n+' installed' : 'tap to add';
   });
+  const ui=(fleet&&fleet.upg?fleet.upg:[]).filter(i=>i.c===curCutter);
+  const ut=document.querySelector('[data-eqcount="upg"]');
+  if(ut) ut.textContent = ui.length ? ui.filter(i=>i.st==='installed').length+'/'+ui.length+' done' : 'tap to view';
   renderNotes();
 }
 
@@ -1272,7 +1287,7 @@ $('inspCopy').onclick=async()=>{
 
 /* ================= equipment registers (drives / pumps / software) ================= */
 let equipKind='drives', equipFilterC=null, equipEditId=null;
-const KIND_LABEL={drives:'Drive register', pumps:'Pump register', motors:'Motor register', sw:'Software register'};
+const KIND_LABEL={drives:'Drive register', pumps:'Pump register', motors:'Motor register', sw:'Software register', upg:'Drive upgrades (Bobst quote)'};
 function openEquip(kind, filterC){
   equipKind=kind;
   equipFilterC=(filterC===undefined||filterC===null)?null:filterC;
@@ -1286,14 +1301,22 @@ function buildEquipForm(){
   const og=document.createElement('option'); og.value='0'; og.textContent='Plant / general'; sel.appendChild(og);
   CUTTERS.forEach(c=>{ const o=document.createElement('option'); o.value=String(c); o.textContent='Cutter '+c; sel.appendChild(o); });
   sel.value=String(equipFilterC||curCutter);
-  const sw = equipKind==='sw';
+  const sw = equipKind==='sw', up = equipKind==='upg';
   $('fM').style.display = sw?'none':'block';
   $('rowIds').style.display = sw?'none':'grid';
   $('fLoc').style.display = sw?'none':'block';
   $('fVer').style.display = sw?'block':'none';
   $('rowCost').style.display = sw?'none':'grid';
-  $('equipNameLbl').textContent = sw ? 'Software / system' : 'Designation';
-  $('fWorkLbl').textContent = sw ? 'Last updated / installed' : 'Last install / work done';
+  $('fM').querySelector('label').textContent = up ? 'Drive (G#)' : 'M# (motor no.)';
+  const idLbls = $('rowIds').querySelectorAll('label');
+  idLbls[0].textContent = up ? 'Original drive (nameplate)' : 'GBP ID';
+  idLbls[1].textContent = up ? 'Upgrade part #' : 'Part # / model';
+  $('fLoc').querySelector('label').textContent = up ? 'Upgrade drive (nameplate)' : 'Location on machine';
+  const costLbls = $('rowCost').querySelectorAll('label');
+  costLbls[0].textContent = up ? 'Lead time (weeks)' : 'Last lead time';
+  costLbls[1].textContent = up ? 'Estimated cost' : 'Last cost';
+  $('equipNameLbl').textContent = sw ? 'Software / system' : up ? 'Drive function' : 'Designation';
+  $('fWorkLbl').textContent = sw ? 'Last updated / installed' : up ? 'Installed / work done' : 'Last install / work done';
   clearEquipForm();
 }
 function clearEquipForm(){
@@ -1301,6 +1324,14 @@ function clearEquipForm(){
   equipEditId=null;
   $('equipAdd').textContent='Add item';
   $('equipCancelEdit').style.display='none';
+}
+function pillCls(it){
+  if(equipKind==='upg') return {na:'p-na',avail:'p-plan',ordered:'p-watch',installed:'p-done'}[it.st]||'p-plan';
+  return 'p-'+it.st;
+}
+function pillLabel(it){
+  if(equipKind==='upg') return {na:'N/A',avail:'AVAILABLE',ordered:'ORDERED',installed:'INSTALLED'}[it.st]||'AVAILABLE';
+  return it.st.toUpperCase();
 }
 function renderEquip(){
   const items=(fleet[equipKind]||[]).slice();
@@ -1334,11 +1365,16 @@ function renderEquip(){
         (hist?'<div class="m">'+hist+'</div>':'')+
         (it.notes?'<div class="m">'+esc(it.notes)+'</div>':'')+
         '</div>'+
-        '<button class="pill p-'+it.st+'">'+it.st.toUpperCase()+'</button>'+
+        '<button class="pill '+pillCls(it)+'">'+pillLabel(it)+'</button>'+
         '<button class="del" data-a="edit">edit</button><button class="del" data-a="del">del</button>';
       d.querySelector('.pill').onclick=()=>{
-        it.st = it.st==='ok' ? 'watch' : it.st==='watch' ? 'issue' : 'ok';
-        saveKeys(equipKind); renderEquip();
+        if(equipKind==='upg'){
+          const o=['na','avail','ordered','installed'];
+          it.st = o[(o.indexOf(it.st)+1) % o.length];
+        } else {
+          it.st = it.st==='ok' ? 'watch' : it.st==='watch' ? 'issue' : 'ok';
+        }
+        saveKeys(equipKind); renderEquip(); renderMachine();
       };
       d.querySelector('[data-a="edit"]').onclick=()=>{
         equipEditId=it.id;
@@ -1381,7 +1417,7 @@ $('equipAdd').onclick=()=>{
     toast('Saved');
   } else {
     vals.id=Date.now()+'-'+Math.random().toString(36).slice(2,6);
-    vals.st='ok';
+    vals.st = equipKind==='upg' ? 'avail' : 'ok';
     fleet[equipKind].push(vals);
     toast('Added');
   }
@@ -1398,7 +1434,7 @@ $('equipCopy').onclick=async()=>{
     groups[k].forEach(it=>{
       const bits=[it.m, it.name, it.ver, it.gbp, it.pn||it.spec, it.loc].filter(Boolean).join(' · ');
       const hist=[it.work?'last: '+it.work:'', it.lead?'lead '+it.lead:'', it.cost].filter(Boolean).join(' · ');
-      lines.push('  '+bits+'  ['+it.st.toUpperCase()+']'+(hist?'  — '+hist:'')+(it.notes?'  — '+it.notes:''));
+      lines.push('  '+bits+'  ['+pillLabel(it)+']'+(hist?'  — '+hist:'')+(it.notes?'  — '+it.notes:''));
     });
     lines.push('');
   });

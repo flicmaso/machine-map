@@ -203,6 +203,11 @@
   .headline .hbox{border:1.5px solid var(--ink); background:var(--card); padding:7px 12px; text-align:center;}
   .headline .hbox b{display:block; font-size:19px;}
   .headline .hbox span{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); text-transform:uppercase;}
+  .eqbox{cursor:pointer;}
+  .eqrect{fill:rgba(43,76,126,.07); stroke:var(--draft); stroke-width:2.5; vector-effect:non-scaling-stroke; stroke-dasharray:7 4;}
+  .eqbox:hover .eqrect{fill:rgba(43,76,126,.16);}
+  .eqlab{font-family:'Saira Semi Condensed',sans-serif; font-weight:700; font-size:26px; fill:var(--draft);}
+  .eqcount{font-family:'IBM Plex Mono',monospace; font-size:19px; fill:var(--draft);}
 </style>
 </head>
 <body>
@@ -412,23 +417,39 @@
     </div>
   </div>
 </div>
-<!-- Drives / Pumps registers -->
+<!-- Equipment registers -->
 <div class="modal-bg" id="equipModal">
   <div class="modal wide">
-    <h3><span id="equipTitle">Drive list</span><button class="x" id="equipClose" aria-label="Close">✕</button></h3>
+    <h3><span id="equipTitle">Equipment</span><button class="x" id="equipClose" aria-label="Close">✕</button></h3>
     <div class="body">
-      <p class="small" style="margin-bottom:9px;" id="equipBlurb"></p>
+      <div class="type-row" style="margin-bottom:10px;" id="equipTabs">
+        <button data-k="drives">DRIVES</button>
+        <button data-k="pumps">PUMPS</button>
+        <button data-k="sw">SOFTWARE</button>
+      </div>
+      <div id="equipFilterRow" style="display:none; margin-bottom:8px;"></div>
       <div id="equipList"></div>
       <div style="border-top:1px solid var(--rule); margin-top:12px; padding-top:10px;">
         <div class="grid2">
           <div class="field"><label>Machine</label><select id="equipCutter"></select></div>
-          <div class="field"><label>Name / location</label><input id="equipName" placeholder="e.g. Main drive motor"></div>
+          <div class="field" id="fM"><label>M# (motor no.)</label><input id="equipM" placeholder="e.g. M8"></div>
+        </div>
+        <div class="field"><label id="equipNameLbl">Designation</label><input id="equipName" placeholder="e.g. Vacuum pump — feed table blower"></div>
+        <div class="grid2" id="rowIds">
+          <div class="field"><label>GBP ID</label><input id="equipGbp" placeholder="e.g. GBP-DC-0142"></div>
+          <div class="field"><label>Part # / model</label><input id="equipSpec" placeholder="e.g. Becker VTLF 2.250"></div>
         </div>
         <div class="grid2">
-          <div class="field"><label>Model / part no.</label><input id="equipSpec" placeholder="e.g. ABB ACS880-01-145A-3"></div>
-          <div class="field"><label>Notes</label><input id="equipNotes" placeholder="e.g. spare on shelf, PTI vibration route"></div>
+          <div class="field" id="fLoc"><label>Location on machine</label><input id="equipLoc" placeholder="e.g. Base frame, operator side"></div>
+          <div class="field" id="fVer" style="display:none;"><label>Version</label><input id="equipVer" placeholder="e.g. v4.2.1"></div>
+          <div class="field" id="fWork"><label id="fWorkLbl">Last install / work done</label><input id="equipWork" placeholder="e.g. 2025.11 — rebuilt, new vanes"></div>
         </div>
-        <div class="actions"><button id="equipCopy">Copy list</button><button class="go" id="equipAdd">Add item</button></div>
+        <div class="grid2" id="rowCost">
+          <div class="field"><label>Last lead time</label><input id="equipLead" placeholder="e.g. 6 wk"></div>
+          <div class="field"><label>Last cost</label><input id="equipCost" placeholder="e.g. $4,820"></div>
+        </div>
+        <div class="field"><label>Notes</label><input id="equipNotes" placeholder="spare on shelf, PTI vibration route, etc."></div>
+        <div class="actions"><button id="equipCancelEdit" style="display:none;">Cancel edit</button><button id="equipCopy">Copy list</button><button class="go" id="equipAdd">Add item</button></div>
       </div>
     </div>
   </div>
@@ -516,7 +537,7 @@ function blankCutter(){
   return {sections, entries:[], insp:[], notes:[], dt:[], lastWalkdown:null};
 }
 function blankFleet(){
-  const f = {cutters:{}, author:'', drives:[], pumps:[], txt:{}, v:3};
+  const f = {cutters:{}, author:'', drives:[], pumps:[], sw:[], txt:{}, v:4};
   CUTTERS.forEach(c => f.cutters[c] = blankCutter()); return f;
 }
 
@@ -558,6 +579,7 @@ function adoptRows(rows){
     else if(row.id === 'drives'){ if(row.data && Array.isArray(row.data.items)) fleet.drives = row.data.items; }
     else if(row.id === 'pumps'){ if(row.data && Array.isArray(row.data.items)) fleet.pumps = row.data.items; }
     else if(row.id === 'txt'){ if(row.data && row.data.map) fleet.txt = row.data.map; }
+    else if(row.id === 'sw'){ if(row.data && Array.isArray(row.data.items)) fleet.sw = row.data.items; }
     else {
       const c = parseInt(row.id,10);
       if(CUTTERS.includes(c) && row.data && row.data.sections){
@@ -579,6 +601,7 @@ async function loadFleet(){
   if(!Array.isArray(fleet.drives)) fleet.drives = [];
   if(!Array.isArray(fleet.pumps)) fleet.pumps = [];
   if(!fleet.txt || typeof fleet.txt !== 'object') fleet.txt = {};
+  if(!Array.isArray(fleet.sw)) fleet.sw = [];
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].notes)) fleet.cutters[c].notes = []; });
   CUTTERS.forEach(c => { if(!Array.isArray(fleet.cutters[c].dt)) fleet.cutters[c].dt = []; });
   try{
@@ -602,6 +625,7 @@ async function pushDirty(){
     if(id==='drives') return {id:'drives', data:{items:fleet.drives||[]}, updated_at:now};
     if(id==='pumps') return {id:'pumps', data:{items:fleet.pumps||[]}, updated_at:now};
     if(id==='txt') return {id:'txt', data:{map:fleet.txt||{}}, updated_at:now};
+    if(id==='sw') return {id:'sw', data:{items:fleet.sw||[]}, updated_at:now};
     return {id, data:fleet.cutters[id], updated_at:now};
   });
   setChip('saving');
@@ -680,8 +704,19 @@ function buildMachine(){
     const t = el('text',{x:gm.x+30,y:gm.y+38,'text-anchor':'middle',class:'badge-txt'},g);
     t.setAttribute('data-count', s.id); t.textContent='';
     g.addEventListener('click', e => { e.stopPropagation(); selectSection(s.id); });
-    g.addEventListener('dblclick', e => { e.stopPropagation(); zoomToSection(s.id); });
+    g.addEventListener('dblclick', e => { e.stopPropagation(); zoomToSection(s.id); openAdd(s.id, 'issue'); });
     g.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectSection(s.id);} });
+  });
+  const EQ_GEOM = { drives:{x:256,y:846,w:180,h:200}, pumps:{x:256,y:1072,w:180,h:214} };
+  [['drives','DRIVES'],['pumps','PUMPS · W']].forEach(pair => {
+    const k=pair[0], lab=pair[1], gm=EQ_GEOM[k];
+    const g=el('g',{class:'eqbox','data-eq':k,tabindex:'0',role:'button','aria-label':lab+' register'});
+    el('rect',{x:gm.x,y:gm.y,width:gm.w,height:gm.h,rx:10,class:'eqrect'},g);
+    const t1=el('text',{x:gm.x+gm.w/2,y:gm.y+(k==='drives'?gm.h/2-8:26),'text-anchor':'middle',class:'eqlab'},g);
+    t1.textContent=lab;
+    const t2=el('text',{x:gm.x+gm.w/2,y:gm.y+(k==='drives'?gm.h/2+26:gm.h-14),'text-anchor':'middle',class:'eqcount'},g);
+    t2.setAttribute('data-eqcount',k); t2.textContent='';
+    g.addEventListener('click', e => { e.stopPropagation(); openEquip(k, curCutter); });
   });
   el('g',{id:'notesLayer'});
   $('svg').addEventListener('click', () => selectSection(null));
@@ -771,6 +806,10 @@ function renderMachine(){
     const cnt=document.querySelector(`text[data-count="${s.id}"]`);
     const n=openCount(cu,s.id); cnt.textContent = n||'';
   });
+  const pc=(fleet&&fleet.pumps?fleet.pumps:[]).filter(i=>i.c===curCutter).length;
+  const dc=(fleet&&fleet.drives?fleet.drives:[]).filter(i=>i.c===curCutter).length;
+  const pt=document.querySelector('[data-eqcount="pumps"]'); if(pt) pt.textContent = pc ? pc+' installed' : 'tap to add';
+  const dt2=document.querySelector('[data-eqcount="drives"]'); if(dt2) dt2.textContent = dc ? dc+' installed' : 'tap to add';
   renderNotes();
 }
 
@@ -874,11 +913,13 @@ $('filters').querySelectorAll('button').forEach(b=>{
 $('searchBox').addEventListener('input', e=>{ curSearch=e.target.value.trim(); renderLog(); });
 
 /* ================= add entry ================= */
-function openAdd(presetSec){
+function openAdd(presetSec, presetType){
   $('addMach').textContent='Cutter '+curCutter;
   const sel=$('addSec'); sel.innerHTML='';
   SECTIONS.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.letter+' \u2014 '+s.name; sel.appendChild(o); });
   sel.value=presetSec||curSec||'platen';
+  addType = presetType || 'update';
+  $('typeRow').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.t===addType));
   $('addText').value=''; $('addWho').value=fleet.author||'';
   $('addPhoto').value=''; addPhotoData=null;
   $('photoPrev').style.display='none';
@@ -1203,81 +1244,144 @@ $('inspCopy').onclick=async()=>{
   catch(e){ toast('Copy failed'); }
 };
 
-/* ================= drives & pumps registers ================= */
-let equipKind='drives';
-function openEquip(kind){
+/* ================= equipment registers (drives / pumps / software) ================= */
+let equipKind='drives', equipFilterC=null, equipEditId=null;
+const KIND_LABEL={drives:'Drive register', pumps:'Pump register', sw:'Software register'};
+function openEquip(kind, filterC){
   equipKind=kind;
-  $('equipTitle').textContent = kind==='drives' ? 'Drive list \u2014 fleet' : 'Pump list \u2014 fleet';
-  $('equipBlurb').textContent = kind==='drives'
-    ? 'Every drive across the 10 cutters \u2014 model, location, condition. Tap the status pill to cycle OK / WATCH / ISSUE.'
-    : 'Every pump across the 10 cutters \u2014 model, location, condition. Tap the status pill to cycle OK / WATCH / ISSUE.';
+  equipFilterC=(filterC===undefined||filterC===null)?null:filterC;
+  equipEditId=null;
+  buildEquipForm(); renderEquip(); $('equipModal').classList.add('open');
+}
+function buildEquipForm(){
+  $('equipTitle').textContent = KIND_LABEL[equipKind] + (equipFilterC ? ' — Cutter '+equipFilterC : ' — fleet');
+  $('equipTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.k===equipKind));
   const sel=$('equipCutter'); sel.innerHTML='';
   const og=document.createElement('option'); og.value='0'; og.textContent='Plant / general'; sel.appendChild(og);
   CUTTERS.forEach(c=>{ const o=document.createElement('option'); o.value=String(c); o.textContent='Cutter '+c; sel.appendChild(o); });
-  sel.value=String(curCutter);
-  $('equipName').value=''; $('equipSpec').value=''; $('equipNotes').value='';
-  renderEquip(); $('equipModal').classList.add('open');
+  sel.value=String(equipFilterC||curCutter);
+  const sw = equipKind==='sw';
+  $('fM').style.display = sw?'none':'block';
+  $('rowIds').style.display = sw?'none':'grid';
+  $('fLoc').style.display = sw?'none':'block';
+  $('fVer').style.display = sw?'block':'none';
+  $('rowCost').style.display = sw?'none':'grid';
+  $('equipNameLbl').textContent = sw ? 'Software / system' : 'Designation';
+  $('fWorkLbl').textContent = sw ? 'Last updated / installed' : 'Last install / work done';
+  clearEquipForm();
+}
+function clearEquipForm(){
+  ['equipM','equipName','equipGbp','equipSpec','equipLoc','equipVer','equipWork','equipLead','equipCost','equipNotes'].forEach(id=>$(id).value='');
+  equipEditId=null;
+  $('equipAdd').textContent='Add item';
+  $('equipCancelEdit').style.display='none';
 }
 function renderEquip(){
-  const items=fleet[equipKind]||[];
+  const items=(fleet[equipKind]||[]).slice();
+  const fr=$('equipFilterRow');
+  if(equipFilterC){
+    fr.style.display='block';
+    fr.innerHTML='Showing only: <span class="filter-chip" id="equipClearF">Cutter '+equipFilterC+' ✕ show whole fleet</span>';
+    document.getElementById('equipClearF').onclick=()=>{ equipFilterC=null; buildEquipForm(); renderEquip(); };
+  } else fr.style.display='none';
+  const list = equipFilterC ? items.filter(i=>i.c===equipFilterC) : items;
   const box=$('equipList'); box.innerHTML='';
-  if(!items.length){
-    box.innerHTML='<div class="empty">Empty \u2014 add the first '+(equipKind==='drives'?'drive':'pump')+' below. Everything you add syncs to the whole crew.</div>';
+  if(!list.length){
+    const what = equipKind==='sw' ? 'software' : equipKind==='drives' ? 'drive' : 'pump';
+    box.innerHTML='<div class="empty">No '+what+' records'+(equipFilterC?' for Cutter '+equipFilterC:'')+' yet — add the first one below. Syncs to the whole crew.</div>';
     return;
   }
   const groups={};
-  items.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
+  list.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
   Object.keys(groups).sort((a,b)=>a-b).forEach(k=>{
     const head=document.createElement('div'); head.className='equip-head';
     head.textContent = k==='0' ? 'Plant / general' : 'Cutter '+k+' ('+(NORTH.includes(parseInt(k,10))?'North':'South')+')';
     box.appendChild(head);
     groups[k].forEach(it=>{
       const d=document.createElement('div'); d.className='tr-item';
-      d.innerHTML=`<div class="grow"><div class="t"><b>${esc(it.name)}</b>${it.spec?' \u00B7 <span class="mono" style="font-size:11px;">'+esc(it.spec)+'</span>':''}</div>`+
-        (it.notes?`<div class="m">${esc(it.notes)}</div>`:'')+`</div>`+
-        `<button class="pill p-${it.st}">${it.st.toUpperCase()}</button><button class="del">del</button>`;
+      const pn=it.pn||it.spec||'';
+      const title=(it.m?'<b>'+esc(it.m)+'</b> · ':'')+'<b>'+esc(it.name)+'</b>'+(it.ver?' <span class="mono" style="font-size:11px;">'+esc(it.ver)+'</span>':'');
+      const ids=[it.gbp, pn, it.loc].filter(Boolean).map(esc).join(' · ');
+      const hist=[it.work?('Last: '+esc(it.work)):'', it.lead?('lead '+esc(it.lead)):'', it.cost?esc(it.cost):''].filter(Boolean).join(' · ');
+      d.innerHTML='<div class="grow"><div class="t">'+title+'</div>'+
+        (ids?'<div class="m">'+ids+'</div>':'')+
+        (hist?'<div class="m">'+hist+'</div>':'')+
+        (it.notes?'<div class="m">'+esc(it.notes)+'</div>':'')+
+        '</div>'+
+        '<button class="pill p-'+it.st+'">'+it.st.toUpperCase()+'</button>'+
+        '<button class="del" data-a="edit">edit</button><button class="del" data-a="del">del</button>';
       d.querySelector('.pill').onclick=()=>{
         it.st = it.st==='ok' ? 'watch' : it.st==='watch' ? 'issue' : 'ok';
         saveKeys(equipKind); renderEquip();
       };
-      d.querySelector('.del').onclick=()=>{
-        if(!confirm('Delete this item?')) return;
+      d.querySelector('[data-a="edit"]').onclick=()=>{
+        equipEditId=it.id;
+        $('equipCutter').value=String(it.c||0);
+        $('equipM').value=it.m||''; $('equipName').value=it.name||'';
+        $('equipGbp').value=it.gbp||''; $('equipSpec').value=pn;
+        $('equipLoc').value=it.loc||''; $('equipVer').value=it.ver||'';
+        $('equipWork').value=it.work||''; $('equipLead').value=it.lead||'';
+        $('equipCost').value=it.cost||''; $('equipNotes').value=it.notes||'';
+        $('equipAdd').textContent='Save changes';
+        $('equipCancelEdit').style.display='inline-block';
+      };
+      d.querySelector('[data-a="del"]').onclick=()=>{
+        if(!confirm('Delete this record?')) return;
         fleet[equipKind]=fleet[equipKind].filter(x=>x.id!==it.id);
-        saveKeys(equipKind); renderEquip();
+        saveKeys(equipKind); renderEquip(); renderMachine();
       };
       box.appendChild(d);
     });
   });
 }
-$('drivesBtn').onclick=()=>openEquip('drives');
-$('pumpsBtn').onclick=()=>openEquip('pumps');
-$('equipClose').onclick=()=>$('equipModal').classList.remove('open');
+$('equipTabs').querySelectorAll('button').forEach(b=>{
+  b.onclick=()=>openEquip(b.dataset.k, equipFilterC);
+});
+$('drivesBtn').onclick=()=>openEquip('drives', null);
+$('pumpsBtn').onclick=()=>openEquip('pumps', null);
+$('equipClose').onclick=()=>{ $('equipModal').classList.remove('open'); renderMachine(); };
+$('equipCancelEdit').onclick=clearEquipForm;
 $('equipAdd').onclick=()=>{
   const name=$('equipName').value.trim();
-  if(!name){ toast('Name the item first'); return; }
+  if(!name){ toast('Give it a designation first'); return; }
   fleet[equipKind]=fleet[equipKind]||[];
-  fleet[equipKind].push({ id:Date.now()+'-'+Math.random().toString(36).slice(2,6),
-    c:parseInt($('equipCutter').value,10)||0, name,
-    spec:$('equipSpec').value.trim(), notes:$('equipNotes').value.trim(), st:'ok' });
-  $('equipName').value=''; $('equipSpec').value=''; $('equipNotes').value='';
-  saveKeys(equipKind); renderEquip(); toast('Added to '+(equipKind==='drives'?'drive':'pump')+' list');
+  const vals={ c:parseInt($('equipCutter').value,10)||0, name,
+    m:$('equipM').value.trim(), gbp:$('equipGbp').value.trim(), pn:$('equipSpec').value.trim(),
+    loc:$('equipLoc').value.trim(), ver:$('equipVer').value.trim(), work:$('equipWork').value.trim(),
+    lead:$('equipLead').value.trim(), cost:$('equipCost').value.trim(), notes:$('equipNotes').value.trim() };
+  if(equipEditId){
+    const it=fleet[equipKind].find(x=>x.id===equipEditId);
+    if(it) Object.assign(it, vals);
+    toast('Saved');
+  } else {
+    vals.id=Date.now()+'-'+Math.random().toString(36).slice(2,6);
+    vals.st='ok';
+    fleet[equipKind].push(vals);
+    toast('Added');
+  }
+  saveKeys(equipKind); clearEquipForm(); renderEquip(); renderMachine();
 };
 $('equipCopy').onclick=async()=>{
   const items=fleet[equipKind]||[];
-  const lines=[(equipKind==='drives'?'DRIVE LIST':'PUMP LIST')+' \u2014 MASTERCUT FLEET \u2014 '+new Date().toISOString().slice(0,10).replace(/-/g,'.'),''];
+  const list = equipFilterC ? items.filter(i=>i.c===equipFilterC) : items;
+  const lines=[KIND_LABEL[equipKind].toUpperCase()+(equipFilterC?' — CUTTER '+equipFilterC:' — MASTERCUT FLEET')+' — '+new Date().toISOString().slice(0,10).replace(/-/g,'.'),''];
   const groups={};
-  items.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
+  list.forEach(it=>{ const k=it.c||0; (groups[k]=groups[k]||[]).push(it); });
   Object.keys(groups).sort((a,b)=>a-b).forEach(k=>{
     lines.push(k==='0'?'PLANT / GENERAL':'CUTTER '+k);
-    groups[k].forEach(it=>lines.push(`  ${it.name}${it.spec?' \u00B7 '+it.spec:''}  [${it.st.toUpperCase()}]${it.notes?' \u2014 '+it.notes:''}`));
+    groups[k].forEach(it=>{
+      const bits=[it.m, it.name, it.ver, it.gbp, it.pn||it.spec, it.loc].filter(Boolean).join(' · ');
+      const hist=[it.work?'last: '+it.work:'', it.lead?'lead '+it.lead:'', it.cost].filter(Boolean).join(' · ');
+      lines.push('  '+bits+'  ['+it.st.toUpperCase()+']'+(hist?'  — '+hist:'')+(it.notes?'  — '+it.notes:''));
+    });
     lines.push('');
   });
-  if(!items.length) lines.push('(empty)');
+  if(!list.length) lines.push('(empty)');
   try{ await navigator.clipboard.writeText(lines.join('\n')); toast('List copied'); }
   catch(e){ toast('Copy failed'); }
 };
 
-/* ================= edit mode: text overrides ================= */
+/* ================= edit mode: text overrides ================= *//* ================= edit mode: text overrides ================= */
 let editMode=false, placingNote=false, dragNote=null;
 function T(k, d){ const v = fleet && fleet.txt ? fleet.txt[k] : null; return (typeof v === 'string' && v.length) ? v : d; }
 function setTxt(k, v){

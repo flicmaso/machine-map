@@ -7,7 +7,19 @@
     <meta name="description" content="Plant-owned SCADA and historian proof of concept for packaging plant condition monitoring.">
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body class="is-locked">
+    <section class="access-gate" id="accessGate" aria-labelledby="access-title">
+      <div class="gate-panel">
+        <h1 id="access-title">Private SCADA Link</h1>
+        <p>This proof-of-concept is link-key gated. Use the private link or paste the access key.</p>
+        <label for="accessKey">Access key</label>
+        <div class="gate-row">
+          <input id="accessKey" type="password" autocomplete="off" spellcheck="false">
+          <button id="unlockBtn" type="button">Unlock</button>
+        </div>
+        <p class="gate-error" id="accessError" role="status"></p>
+      </div>
+    </section>
     <div class="app-shell">
       <header class="topbar">
         <div class="brand-block">
@@ -29,9 +41,12 @@
 
       <nav class="screen-tabs" aria-label="SCADA views">
         <button class="tab is-active" type="button" data-view="overview">Overview</button>
+        <button class="tab" type="button" data-view="tags">Tags</button>
+        <button class="tab" type="button" data-view="alarms">Alarms</button>
         <button class="tab" type="button" data-view="architecture">Architecture</button>
         <button class="tab" type="button" data-view="rollout">Rollout</button>
         <button class="tab" type="button" data-view="vendors">Vendors</button>
+        <button class="tab" type="button" data-view="settings">Settings</button>
       </nav>
 
       <main>
@@ -63,7 +78,7 @@
             <section class="plant-panel" aria-labelledby="overview-title">
               <div class="panel-titlebar">
                 <div>
-                  <h2 id="overview-title">Packaging Plant Live Map</h2>
+                  <h2 id="overview-title">Perspective Session - Packaging Plant Live Map</h2>
                   <p>North and South baler rooms plus Bobst die-cutter electrical pilots</p>
                 </div>
                 <div class="legend">
@@ -107,14 +122,14 @@
                 <div class="chart-block">
                   <div class="chart-heading">
                     <span>Vibration trend</span>
-                    <small>Warn .18 / Alarm .30 in/s</small>
+                    <small id="vibThresholdLabel">Warn .18 / Alarm .30 in/s</small>
                   </div>
                   <canvas id="vibChart" width="520" height="150"></canvas>
                 </div>
                 <div class="chart-block">
                   <div class="chart-heading">
                     <span>Temperature trend</span>
-                    <small>Warn 160 / Alarm 185 deg F</small>
+                    <small id="tempThresholdLabel">Warn 160 / Alarm 185 deg F</small>
                   </div>
                   <canvas id="tempChart" width="520" height="150"></canvas>
                 </div>
@@ -128,6 +143,93 @@
                 <div id="eventList"></div>
               </div>
             </aside>
+          </div>
+        </section>
+
+        <section class="view" id="tags" aria-labelledby="tags-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="tags-title">Tag Browser and UDT Instances</h2>
+                <p>Ignition-style provider tree, current values, quality, scan class, and historian state</p>
+              </div>
+              <span class="status-pill normal">TAG PROVIDER OK</span>
+            </div>
+            <div class="ignition-grid">
+              <aside class="tree-panel">
+                <h3>Realtime Tag Provider</h3>
+                <ul class="tag-tree">
+                  <li>[default]</li>
+                  <li>GBP
+                    <ul>
+                      <li>DePere
+                        <ul>
+                          <li>FoldingCarton</li>
+                          <li>BalerRoom-North</li>
+                          <li>BalerRoom-South</li>
+                          <li>BobstDieCutters</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+                <div class="gateway-card">
+                  <h3>Gateway Health</h3>
+                  <p>Store-and-forward: <strong>0 quarantined</strong></p>
+                  <p>MQTT primary: <strong>connected</strong></p>
+                  <p>Historian cache: <strong>writing</strong></p>
+                  <p>Scan class: <strong>1.2s POC</strong></p>
+                </div>
+              </aside>
+              <section class="tag-table-wrap">
+                <div class="table-toolbar">
+                  <strong>UDT: ConditionMotor</strong>
+                  <span>Parameters: Area, Asset, Bearing, Protocol, Vendor</span>
+                </div>
+                <div class="tag-table" id="tagTable" role="table" aria-label="Realtime tags"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="alarms" aria-labelledby="alarms-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="alarms-title">Alarm Status and Journal</h2>
+                <p>Active alarms, acknowledgement state, shelves, and notification pipeline history</p>
+              </div>
+              <span class="status-pill alarm">LIVE EVENTS</span>
+            </div>
+            <div class="alarm-console">
+              <section class="alarm-console-main">
+                <div class="table-toolbar">
+                  <strong>Alarm Status Table</strong>
+                  <div class="toolbar-buttons">
+                    <button type="button" id="ackAllAlarms">Ack All</button>
+                    <button type="button" id="shelveWarnings">Shelve Warnings</button>
+                    <button type="button" id="clearShelves">Clear Shelves</button>
+                  </div>
+                </div>
+                <div class="journal-table" id="alarmJournal" role="table" aria-label="Alarm journal"></div>
+              </section>
+              <aside class="pipeline-panel">
+                <h3>Alarm Pipeline</h3>
+                <ol class="pipeline">
+                  <li>Condition tag crosses threshold</li>
+                  <li>Priority rule: alarm beats warning</li>
+                  <li>Email / SMS roster lookup</li>
+                  <li>Escalate if unacknowledged</li>
+                  <li>Write event to historian</li>
+                </ol>
+                <div class="gateway-card">
+                  <h3>Journal Query</h3>
+                  <p>Provider: <strong>[default]</strong></p>
+                  <p>Window: <strong>Last 8 hours</strong></p>
+                  <p>Rows shown: <strong id="journalRows">0</strong></p>
+                </div>
+              </aside>
+            </div>
           </div>
         </section>
 
@@ -155,6 +257,10 @@
               <article>
                 <h3>Plant-Owned Data Backbone</h3>
                 <p>Field devices publish open-protocol data into a unified namespace such as <code>GBP/DePere/FoldingCarton/BalerRoom-North/Blower-01/DE-Bearing</code>. The historian is the durable record, not a vendor cloud dashboard.</p>
+              </article>
+              <article>
+                <h3>Ignition Project Shape</h3>
+                <p>Perspective-style pages, a realtime tag provider, UDT instances per asset, alarm pipelines, Tag Historian storage, store-and-forward buffering, gateway status, and role-scoped operator views.</p>
               </article>
               <article>
                 <h3>Protocol Contract</h3>
@@ -214,6 +320,59 @@
                 <li>What still works if subscription fees stop?</li>
                 <li>Can the pilot prove one live local tag in our historian before purchase?</li>
               </ol>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="settings" aria-labelledby="settings-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="settings-title">Thresholds and Alert Routing</h2>
+                <p>POC notification routing for vibration, temperature, email, and SMS escalation</p>
+              </div>
+              <span class="status-pill warning">SIMULATED SEND</span>
+            </div>
+            <div class="settings-grid">
+              <form class="settings-card" id="thresholdForm">
+                <h3>Alarm Thresholds</h3>
+                <label>Vibration warning in/s <input id="vibWarn" type="number" min="0.01" max="1" step="0.001"></label>
+                <label>Vibration alarm in/s <input id="vibAlarm" type="number" min="0.01" max="1" step="0.001"></label>
+                <label>Temperature warning deg F <input id="tempWarn" type="number" min="80" max="260" step="1"></label>
+                <label>Temperature alarm deg F <input id="tempAlarm" type="number" min="80" max="260" step="1"></label>
+                <div class="form-actions">
+                  <button type="submit">Apply Thresholds</button>
+                  <button type="button" id="resetThresholds">Reset</button>
+                </div>
+              </form>
+
+              <form class="settings-card" id="alertForm">
+                <h3>Alert Contacts</h3>
+                <label>Email recipients <input id="emailRecipients" type="text" placeholder="maintenance@plant.com, controls@plant.com"></label>
+                <label>Text recipients <input id="smsRecipients" type="text" placeholder="+19205550123, +19205550124"></label>
+                <div class="switch-row">
+                  <label><input id="emailEnabled" type="checkbox" checked> Email alerts</label>
+                  <label><input id="smsEnabled" type="checkbox" checked> Text alerts</label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">Save Routing</button>
+                  <button type="button" id="sendTestAlert">Send Test Alert</button>
+                </div>
+              </form>
+
+              <article class="settings-card">
+                <h3>Alert Behavior</h3>
+                <p>When an asset enters alarm, this demo queues an email and text notification with tag path, values, threshold, and protocol. In a production Ignition build, this maps to alarm pipelines using SMTP and an SMS gateway such as carrier email-to-SMS, Twilio, or plant paging.</p>
+                <p class="soft-warning">Static GitHub Pages cannot send private server-side email or SMS by itself. This screen demonstrates the operator workflow and payload.</p>
+              </article>
+
+              <article class="settings-card alert-log-card">
+                <div class="alarm-header">
+                  <strong>Outbound alert log</strong>
+                  <span id="alertRouteState">Email + SMS enabled</span>
+                </div>
+                <div id="alertLog"></div>
+              </article>
             </div>
           </div>
         </section>

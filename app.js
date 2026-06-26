@@ -24,7 +24,21 @@ const state = {
   acknowledged: 0,
   selectedId: "N-BL-05",
   ticks: 0,
-  series: new Map()
+  series: new Map(),
+  alerts: [],
+  lastAlertStatus: new Map(),
+  acked: new Set(),
+  shelved: new Set(),
+  config: {
+    vibWarn: 0.18,
+    vibAlarm: 0.3,
+    tempWarn: 160,
+    tempAlarm: 185,
+    emailRecipients: "maintenance@plant.example, controls@plant.example",
+    smsRecipients: "+19205550123",
+    emailEnabled: true,
+    smsEnabled: true
+  }
 };
 
 const rooms = {
@@ -37,8 +51,8 @@ const roomEls = {};
 const assetEls = new Map();
 
 function statusFor(asset) {
-  if (asset.vib >= 0.3 || asset.temp >= 185) return "alarm";
-  if (asset.vib >= 0.18 || asset.temp >= 160) return "warning";
+  if (asset.vib >= state.config.vibAlarm || asset.temp >= state.config.tempAlarm) return "alarm";
+  if (asset.vib >= state.config.vibWarn || asset.temp >= state.config.tempWarn) return "warning";
   return "normal";
 }
 
@@ -110,6 +124,7 @@ function updateData() {
   if (state.paused) return;
   state.ticks += 1;
   assets.forEach((asset) => jitter(asset, asset.electrical ? 0.018 : 0.024, asset.electrical ? 5 : 7));
+  queueAutomaticAlerts();
 }
 
 function fmtVib(value) {
@@ -151,7 +166,7 @@ function renderDetail() {
   const asset = assets.find((item) => item.id === state.selectedId) || assets[0];
   const status = document.getElementById("detailStatus");
   document.getElementById("detail-title").textContent = asset.name;
-  document.getElementById("detailPath").textContent = `GBP/DePere/FoldingCarton/${rooms[asset.room].label.replaceAll(" ", "")}/${asset.id}/DE-Bearing`;
+  document.getElementById("detailPath").textContent = tagPath(asset);
   document.getElementById("detailVib").textContent = fmtVib(asset.vib);
   document.getElementById("detailTemp").textContent = fmtTemp(asset.temp);
   document.getElementById("detailProtocol").textContent = asset.protocol;
@@ -159,8 +174,10 @@ function renderDetail() {
   status.className = `status-pill ${asset.status}`;
 
   const series = state.series.get(asset.id);
-  drawChart(document.getElementById("vibChart"), series.vib, 0, 0.42, [{ value: 0.18, color: "#f3b63f" }, { value: 0.3, color: "#f04b3f" }]);
-  drawChart(document.getElementById("tempChart"), series.temp, 90, 210, [{ value: 160, color: "#f3b63f" }, { value: 185, color: "#f04b3f" }]);
+  document.getElementById("vibThresholdLabel").textContent = `Warn ${state.config.vibWarn.toFixed(3)} / Alarm ${state.config.vibAlarm.toFixed(3)} in/s`;
+  document.getElementById("tempThresholdLabel").textContent = `Warn ${state.config.tempWarn} / Alarm ${state.config.tempAlarm} deg F`;
+  drawChart(document.getElementById("vibChart"), series.vib, 0, 0.42, [{ value: state.config.vibWarn, color: "#f3b63f" }, { value: state.config.vibAlarm, color: "#f04b3f" }]);
+  drawChart(document.getElementById("tempChart"), series.temp, 90, 210, [{ value: state.config.tempWarn, color: "#f3b63f" }, { value: state.config.tempAlarm, color: "#f04b3f" }]);
 }
 
 function drawChart(canvas, values, min, max, bands) {
@@ -216,6 +233,116 @@ function renderEvents() {
   document.getElementById("ackState").textContent = `${state.acknowledged} acknowledged`;
 }
 
+function tagPath(asset, point = "DE-Bearing") {
+  return `GBP/DePere/FoldingCarton/${rooms[asset.room].label.replaceAll(" ", "")}/${asset.id}/${point}`;
+}
+
+function renderTagTable() {
+  const rows = assets.map((asset) => {
+    const historian = asset.electrical ? "On Change" : "Periodic 1.2s";
+    return `
+      <div class="tag-row ${asset.status}" role="row">
+        <span>${tagPath(asset)}</span>
+        <span>${fmtVib(asset.vib)}</span>
+        <span>${fmtTemp(asset.temp)}</span>
+        <span class="status-cell">${asset.status.toUpperCase()}</span>
+        <span>Good</span>
+        <span>${historian}</span>
+        <span>${asset.protocol}</span>
+      </div>
+    `;
+  }).join("");
+  document.getElementById("tagTable").innerHTML = `
+    <div class="tag-row header" role="row">
+      <span>Tag path</span><span>Vib</span><span>Temp</span><span>Alarm</span><span>Quality</span><span>Historian</span><span>Driver</span>
+    </div>
+    ${rows}
+  `;
+}
+
+function renderAlarmJournal() {
+  const alarmAssets = assets
+    .filter((asset) => asset.status !== "normal")
+    .sort((a, b) => {
+      if (a.status === b.status) return a.name.localeCompare(b.name);
+      return a.status === "alarm" ? -1 : 1;
+    });
+  const rows = alarmAssets.map((asset) => {
+    const shelved = state.shelved.has(asset.id);
+    const acked = state.acked.has(asset.id);
+    const reason = asset.vib >= state.config.vibAlarm || asset.vib >= state.config.vibWarn ? "Vibration RMS" : "Bearing Temp";
+    return `
+      <div class="journal-row ${asset.status}${shelved ? " shelved" : ""}" role="row">
+        <span>${asset.status.toUpperCase()}</span>
+        <span>${acked ? "Acked" : "Unacked"}${shelved ? " / Shelved" : ""}</span>
+        <span>${tagPath(asset)}</span>
+        <span>${reason}</span>
+        <span>${fmtVib(asset.vib)} / ${fmtTemp(asset.temp)}</span>
+        <span>${asset.protocol}</span>
+      </div>
+    `;
+  }).join("");
+  document.getElementById("alarmJournal").innerHTML = `
+    <div class="journal-row header" role="row">
+      <span>Priority</span><span>State</span><span>Source</span><span>Condition</span><span>Values</span><span>Pipeline</span>
+    </div>
+    ${rows || `<div class="journal-row normal" role="row"><span>OK</span><span>Clear</span><span>[default]</span><span>No active alarms</span><span>--</span><span>Idle</span></div>`}
+  `;
+  document.getElementById("journalRows").textContent = String(alarmAssets.length);
+}
+
+function alertChannels() {
+  const channels = [];
+  if (state.config.emailEnabled) channels.push("EMAIL");
+  if (state.config.smsEnabled) channels.push("SMS");
+  return channels;
+}
+
+function addAlert(asset, reason, test = false) {
+  const channels = alertChannels();
+  const route = channels.length ? channels.join("+") : "DISABLED";
+  const message = `${asset.name}: ${fmtVib(asset.vib)} in/s, ${fmtTemp(asset.temp)} deg F - ${reason}`;
+  state.alerts.unshift({
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    route,
+    message: test ? `TEST - ${message}` : message
+  });
+  state.alerts = state.alerts.slice(0, 12);
+}
+
+function queueAutomaticAlerts() {
+  assets.forEach((asset) => {
+    const previous = state.lastAlertStatus.get(asset.id) || "normal";
+    if (asset.status === "alarm" && previous !== "alarm") {
+      addAlert(asset, `crossed alarm threshold via ${asset.protocol}`);
+    }
+    state.lastAlertStatus.set(asset.id, asset.status);
+  });
+}
+
+function renderAlertSettings() {
+  document.getElementById("vibWarn").value = state.config.vibWarn;
+  document.getElementById("vibAlarm").value = state.config.vibAlarm;
+  document.getElementById("tempWarn").value = state.config.tempWarn;
+  document.getElementById("tempAlarm").value = state.config.tempAlarm;
+  document.getElementById("emailRecipients").value = state.config.emailRecipients;
+  document.getElementById("smsRecipients").value = state.config.smsRecipients;
+  document.getElementById("emailEnabled").checked = state.config.emailEnabled;
+  document.getElementById("smsEnabled").checked = state.config.smsEnabled;
+}
+
+function renderAlertLog() {
+  const channels = alertChannels();
+  document.getElementById("alertRouteState").textContent = channels.length ? `${channels.join(" + ")} enabled` : "Notifications disabled";
+  document.getElementById("alertLog").innerHTML = state.alerts.map((alert) => `
+    <div class="alert-log-row">
+      <strong>${alert.route}</strong>
+      <span>${alert.message}</span>
+      <span>${alert.time}</span>
+    </div>
+  `).join("") || `<div class="alert-log-row"><strong>IDLE</strong><span>No outbound alerts queued yet</span><span>--</span></div>`;
+}
+
 function renderClock() {
   document.getElementById("clock").textContent = new Date().toLocaleTimeString([], {
     hour: "2-digit",
@@ -229,6 +356,9 @@ function render() {
   renderCounts();
   renderDetail();
   renderEvents();
+  renderTagTable();
+  renderAlarmJournal();
+  renderAlertLog();
   renderClock();
 }
 
@@ -248,14 +378,111 @@ function bindControls() {
   });
 
   document.getElementById("ackBtn").addEventListener("click", () => {
-    state.acknowledged += assets.filter((asset) => asset.status !== "normal").length;
-    renderEvents();
+    const active = assets.filter((asset) => asset.status !== "normal");
+    active.forEach((asset) => state.acked.add(asset.id));
+    state.acknowledged += active.length;
+    render();
+  });
+
+  document.getElementById("ackAllAlarms").addEventListener("click", () => {
+    const active = assets.filter((asset) => asset.status !== "normal");
+    active.forEach((asset) => state.acked.add(asset.id));
+    state.acknowledged += active.length;
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "operator acknowledged active alarm table", true);
+    render();
+  });
+
+  document.getElementById("shelveWarnings").addEventListener("click", () => {
+    assets.filter((asset) => asset.status === "warning").forEach((asset) => state.shelved.add(asset.id));
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "warning alarms shelved for maintenance review", true);
+    render();
+  });
+
+  document.getElementById("clearShelves").addEventListener("click", () => {
+    state.shelved.clear();
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "alarm shelves cleared", true);
+    render();
+  });
+
+  document.getElementById("thresholdForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const next = {
+      vibWarn: Number(document.getElementById("vibWarn").value),
+      vibAlarm: Number(document.getElementById("vibAlarm").value),
+      tempWarn: Number(document.getElementById("tempWarn").value),
+      tempAlarm: Number(document.getElementById("tempAlarm").value)
+    };
+    if (next.vibWarn >= next.vibAlarm || next.tempWarn >= next.tempAlarm) {
+      addAlert(assets.find((asset) => asset.id === state.selectedId), "threshold save rejected: warning must be below alarm", true);
+      render();
+      return;
+    }
+    Object.assign(state.config, next);
+    assets.forEach((asset) => { asset.status = statusFor(asset); });
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "threshold set updated", true);
+    render();
+  });
+
+  document.getElementById("resetThresholds").addEventListener("click", () => {
+    Object.assign(state.config, { vibWarn: 0.18, vibAlarm: 0.3, tempWarn: 160, tempAlarm: 185 });
+    assets.forEach((asset) => { asset.status = statusFor(asset); });
+    renderAlertSettings();
+    render();
+  });
+
+  document.getElementById("alertForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.config.emailRecipients = document.getElementById("emailRecipients").value.trim();
+    state.config.smsRecipients = document.getElementById("smsRecipients").value.trim();
+    state.config.emailEnabled = document.getElementById("emailEnabled").checked;
+    state.config.smsEnabled = document.getElementById("smsEnabled").checked;
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "alert routing saved", true);
+    render();
+  });
+
+  document.getElementById("sendTestAlert").addEventListener("click", () => {
+    addAlert(assets.find((asset) => asset.id === state.selectedId), "manual operator test alert", true);
+    render();
+  });
+}
+
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function unlockWithKey(key) {
+  const accessHash = "b4236cde341f421f54e2de36bb6dab672c2774d5cec535d4eecde7e88dd7a36d";
+  const supplied = (key || "").trim();
+  if (!supplied) return false;
+  if (await sha256(supplied) === accessHash) {
+    sessionStorage.setItem("scadaAccess", supplied);
+    document.body.classList.remove("is-locked");
+    return true;
+  }
+  return false;
+}
+
+function bindAccessGate() {
+  const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const hashKey = params.get("key");
+  const storedKey = sessionStorage.getItem("scadaAccess");
+  unlockWithKey(hashKey || storedKey).then((ok) => {
+    if (ok) return;
+    document.getElementById("unlockBtn").addEventListener("click", async () => {
+      const key = document.getElementById("accessKey").value;
+      const unlocked = await unlockWithKey(key);
+      document.getElementById("accessError").textContent = unlocked ? "" : "Access key rejected.";
+    });
   });
 }
 
 initData();
 buildMap();
 bindControls();
+bindAccessGate();
+renderAlertSettings();
 render();
 setInterval(() => {
   updateData();

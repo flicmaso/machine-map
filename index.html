@@ -175,6 +175,9 @@
                   <strong>UDT: ConditionMotor</strong>
                   <input id="tagSearch" type="search" placeholder="Filter: name, id, room, protocol, status" aria-label="Filter tag table" style="flex:1;min-width:200px;max-width:320px;margin:0 12px;padding:4px 10px;font:inherit;color:inherit;background:rgba(0,0,0,0.25);border:1px solid rgba(128,128,128,0.45);border-radius:4px;">
                   <span id="tagFilterCount">18 tags</span>
+                  <div class="toolbar-buttons">
+                    <button type="button" id="exportTagsCsv">Export CSV</button>
+                  </div>
                 </div>
                 <div class="tag-table" id="tagTable" role="table" aria-label="Realtime tags"></div>
               </section>
@@ -199,6 +202,7 @@
                     <button type="button" id="ackAllAlarms">Ack All</button>
                     <button type="button" id="shelveWarnings">Shelve Warnings</button>
                     <button type="button" id="clearShelves">Clear Shelves</button>
+                    <button type="button" id="exportAlarmsCsv">Export CSV</button>
                   </div>
                 </div>
                 <div class="journal-table" id="alarmJournal" role="table" aria-label="Alarm journal"></div>

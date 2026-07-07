@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GBP Packaging SCADA Proof of Concept</title>
+    <meta name="description" content="Plant-owned SCADA and historian proof of concept for packaging plant condition monitoring.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="brand-light" aria-hidden="true"></span>
+          <div>
+            <h1>GBP FCD Condition SCADA</h1>
+            <p>De Pere Packaging - plant-owned historian proof of concept</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="clock-panel">
+            <span>Gateway</span>
+            <strong id="clock">--:--:--</strong>
+          </div>
+          <button class="icon-button" id="pauseBtn" type="button" title="Pause live simulation" aria-label="Pause live simulation">II</button>
+          <button class="icon-button" id="ackBtn" type="button" title="Acknowledge visible alarms" aria-label="Acknowledge visible alarms">ACK</button>
+        </div>
+      </header>
+
+      <nav class="screen-tabs" aria-label="SCADA views">
+        <button class="tab is-active" type="button" data-view="overview">Overview</button>
+        <button class="tab" type="button" data-view="tags">Tags</button>
+        <button class="tab" type="button" data-view="alarms">Alarms</button>
+        <button class="tab" type="button" data-view="architecture">Architecture</button>
+        <button class="tab" type="button" data-view="rollout">Rollout</button>
+        <button class="tab" type="button" data-view="vendors">Vendors</button>
+        <button class="tab" type="button" data-view="settings">Settings</button>
+        <a class="tab" href="index.html" style="text-decoration:none;display:inline-block;" onclick="this.href='index.html'+location.hash">Knowledge Base</a>
+      </nav>
+
+      <main>
+        <section class="view is-active" id="overview" aria-labelledby="overview-title">
+          <div class="status-strip">
+            <div class="status-tile">
+              <span>Total assets</span>
+              <strong id="assetCount">18</strong>
+            </div>
+            <div class="status-tile normal">
+              <span>Normal</span>
+              <strong id="normalCount">0</strong>
+            </div>
+            <div class="status-tile warning">
+              <span>Warning</span>
+              <strong id="warningCount">0</strong>
+            </div>
+            <div class="status-tile alarm">
+              <span>Alarm</span>
+              <strong id="alarmCount">0</strong>
+            </div>
+            <div class="status-tile">
+              <span>Historian writes</span>
+              <strong id="writeCount">0/s</strong>
+            </div>
+          </div>
+
+          <div class="overview-grid">
+            <section class="plant-panel" aria-labelledby="overview-title">
+              <div class="panel-titlebar">
+                <div>
+                  <h2 id="overview-title">Perspective Session - Packaging Plant Live Map</h2>
+                  <p>North and South baler rooms plus Bobst die-cutter electrical pilots</p>
+                </div>
+                <div class="legend">
+                  <span><i class="led normal"></i>Normal</span>
+                  <span><i class="led warning"></i>Warning</span>
+                  <span><i class="led alarm"></i>Alarm</span>
+                </div>
+              </div>
+
+              <div class="plant-map" id="plantMap" aria-label="Interactive equipment map"></div>
+            </section>
+
+            <aside class="detail-panel" aria-labelledby="detail-title">
+              <div class="panel-titlebar compact">
+                <div>
+                  <h2 id="detail-title">Asset Detail</h2>
+                  <p id="detailPath">Select a machine node</p>
+                </div>
+                <span class="status-pill" id="detailStatus">NORMAL</span>
+              </div>
+
+              <div class="big-readouts">
+                <div>
+                  <span>Vibration RMS</span>
+                  <strong id="detailVib">--</strong>
+                  <small>in/s</small>
+                </div>
+                <div>
+                  <span>Bearing temp</span>
+                  <strong id="detailTemp">--</strong>
+                  <small>deg F</small>
+                </div>
+                <div>
+                  <span>Open protocol</span>
+                  <strong id="detailProtocol">--</strong>
+                  <small>local egress</small>
+                </div>
+              </div>
+
+              <div class="trend-stack">
+                <div class="chart-block">
+                  <div class="chart-heading">
+                    <span>Vibration trend</span>
+                    <small id="vibThresholdLabel">Warn .18 / Alarm .30 in/s</small>
+                  </div>
+                  <canvas id="vibChart" width="520" height="150"></canvas>
+                </div>
+                <div class="chart-block">
+                  <div class="chart-heading">
+                    <span>Temperature trend</span>
+                    <small id="tempThresholdLabel">Warn 160 / Alarm 185 deg F</small>
+                  </div>
+                  <canvas id="tempChart" width="520" height="150"></canvas>
+                </div>
+              </div>
+
+              <div class="alarm-list">
+                <div class="alarm-header">
+                  <strong>Active events</strong>
+                  <span id="ackState">0 acknowledged</span>
+                </div>
+                <div id="eventList"></div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="tags" aria-labelledby="tags-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="tags-title">Tag Browser and UDT Instances</h2>
+                <p>Ignition-style provider tree, current values, quality, scan class, and historian state</p>
+              </div>
+              <span class="status-pill normal">TAG PROVIDER OK</span>
+            </div>
+            <div class="ignition-grid">
+              <aside class="tree-panel">
+                <h3>Realtime Tag Provider</h3>
+                <ul class="tag-tree">
+                  <li>[default]</li>
+                  <li>GBP
+                    <ul>
+                      <li>DePere
+                        <ul>
+                          <li>FoldingCarton</li>
+                          <li>BalerRoom-North</li>
+                          <li>BalerRoom-South</li>
+                          <li>BobstDieCutters</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+                <div class="gateway-card">
+                  <h3>Gateway Health</h3>
+                  <p>Store-and-forward: <strong>0 quarantined</strong></p>
+                  <p>MQTT primary: <strong>connected</strong></p>
+                  <p>Historian cache: <strong>writing</strong></p>
+                  <p>Scan class: <strong>1.2s POC</strong></p>
+                </div>
+              </aside>
+              <section class="tag-table-wrap">
+                <div class="table-toolbar">
+                  <strong>UDT: ConditionMotor</strong>
+                  <input id="tagSearch" type="search" placeholder="Filter: name, id, room, protocol, status" aria-label="Filter tag table" style="flex:1;min-width:200px;max-width:320px;margin:0 12px;padding:4px 10px;font:inherit;color:inherit;background:rgba(0,0,0,0.25);border:1px solid rgba(128,128,128,0.45);border-radius:4px;">
+                  <span id="tagFilterCount">18 tags</span>
+                  <div class="toolbar-buttons">
+                    <button type="button" id="exportTagsCsv">Export CSV</button>
+                  </div>
+                </div>
+                <div class="tag-table" id="tagTable" role="table" aria-label="Realtime tags"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="alarms" aria-labelledby="alarms-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="alarms-title">Alarm Status and Journal</h2>
+                <p>Active alarms, acknowledgement state, shelves, and notification pipeline history</p>
+              </div>
+              <span class="status-pill alarm">LIVE EVENTS</span>
+            </div>
+            <div class="alarm-console">
+              <section class="alarm-console-main">
+                <div class="table-toolbar">
+                  <strong>Alarm Status Table</strong>
+                  <div class="toolbar-buttons">
+                    <button type="button" id="ackAllAlarms">Ack All</button>
+                    <button type="button" id="shelveWarnings">Shelve Warnings</button>
+                    <button type="button" id="clearShelves">Clear Shelves</button>
+                    <button type="button" id="exportAlarmsCsv">Export CSV</button>
+                  </div>
+                </div>
+                <div class="journal-table" id="alarmJournal" role="table" aria-label="Alarm journal"></div>
+              </section>
+              <aside class="pipeline-panel">
+                <h3>Alarm Pipeline</h3>
+                <ol class="pipeline">
+                  <li>Condition tag crosses threshold</li>
+                  <li>Priority rule: alarm beats warning</li>
+                  <li>Email / SMS roster lookup</li>
+                  <li>Escalate if unacknowledged</li>
+                  <li>Write event to historian</li>
+                </ol>
+                <div class="gateway-card">
+                  <h3>Journal Query</h3>
+                  <p>Provider: <strong>[default]</strong></p>
+                  <p>Window: <strong>Last 8 hours</strong></p>
+                  <p>Rows shown: <strong id="journalRows">0</strong></p>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="architecture" aria-labelledby="architecture-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="architecture-title">Recommended Architecture</h2>
+                <p>Ignition-style SCADA/Historian first, with Power BI as reporting only</p>
+              </div>
+              <span class="status-pill normal">UNS FIRST</span>
+            </div>
+            <div class="architecture-flow" aria-label="Architecture flow diagram">
+              <div class="flow-node">Sensors<br><span>Banner, IFM, CTC</span></div>
+              <div class="flow-arrow">></div>
+              <div class="flow-node">Room Gateways<br><span>DXMR90 / Edge</span></div>
+              <div class="flow-arrow">></div>
+              <div class="flow-node primary">Ignition Gateway<br><span>SCADA, alarms, UNS</span></div>
+              <div class="flow-arrow">></div>
+              <div class="flow-node">SQL / Canary<br><span>System of record</span></div>
+              <div class="flow-arrow">></div>
+              <div class="flow-node muted">Power BI<br><span>Management summaries</span></div>
+            </div>
+            <div class="architecture-grid">
+              <article>
+                <h3>Plant-Owned Data Backbone</h3>
+                <p>Field devices publish open-protocol data into a unified namespace such as <code>GBP/DePere/FoldingCarton/BalerRoom-North/Blower-01/DE-Bearing</code>. The historian is the durable record, not a vendor cloud dashboard.</p>
+              </article>
+              <article>
+                <h3>Ignition Project Shape</h3>
+                <p>Perspective-style pages, a realtime tag provider, UDT instances per asset, alarm pipelines, Tag Historian storage, store-and-forward buffering, gateway status, and role-scoped operator views.</p>
+              </article>
+              <article>
+                <h3>Protocol Contract</h3>
+                <p>Accept Modbus TCP/RTU, OPC UA, EtherNet/IP, MQTT/Sparkplug B, or 4-20 mA into PLC/SCADA. Reject pilots that cannot prove local live data and full metadata egress.</p>
+              </article>
+              <article>
+                <h3>Hybrid Monitoring</h3>
+                <p>Use vibration and temperature for blower bearing/lubrication faults. Add ESA or power-quality diagnostics for high-value VFD-fed Bobst main motors where electrical signatures matter.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="rollout" aria-labelledby="rollout-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="rollout-title">Staged Plant Rollout</h2>
+                <p>Built around low-risk proof points and ownership of the data stream</p>
+              </div>
+              <span class="status-pill warning">PHASED</span>
+            </div>
+            <div class="phase-grid">
+              <article><b>0</b><h3>Backbone</h3><p>Install Ignition or trial gateway, define UNS, stand up MQTT broker and historian. Success: one live owned tag historized and trended.</p></article>
+              <article><b>1</b><h3>Pilot assets</h3><p>Put Banner VIBE-IQ/QM30VT3 on one North and one South blower. Baseline one Bobst motor with ATPOL III/PdMA/Samotics path.</p></article>
+              <article><b>2</b><h3>Blower rollout</h3><p>Standardize on the phase-1 vibration vendor and roll to all 13 blower points with room gateways and SCADA thresholds.</p></article>
+              <article><b>3</b><h3>Die-cutter motors</h3><p>Add ESA or smart MCC data for rotor, stator, eccentricity, power quality, and load/efficiency diagnostics.</p></article>
+              <article><b>4</b><h3>Hardening</h3><p>Formalize redundancy, edge buffering, segmented OT VLAN, alarm pipelines, and tag/UDT standards.</p></article>
+              <article><b>5</b><h3>Reliability analytics</h3><p>Feed summarized KPIs to Power BI while keeping real-time monitoring and alarm response in SCADA.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="vendors" aria-labelledby="vendors-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="vendors-title">Vendor Shortlist and Questions</h2>
+                <p>Favor open data egress and plant-owned diagnostics over dashboard lock-in</p>
+              </div>
+              <span class="status-pill alarm">LOCK-IN CHECK</span>
+            </div>
+            <div class="vendor-table" role="table" aria-label="Vendor fit table">
+              <div role="row" class="table-head"><span>System</span><span>Best fit</span><span>Protocols</span><span>Risk</span></div>
+              <div role="row"><span>Banner QM30VT3 / VIBE-IQ</span><span>Baler-room wireless pilot</span><span>Modbus, IO-Link, EtherNet/IP via DXMR90</span><span>Confirm FFT/waveform export depth</span></div>
+              <div role="row"><span>IFM VSE + VSA</span><span>Permanent wired sensors</span><span>OPC UA, Modbus TCP, EtherNet/IP, Profinet</span><span>Higher install effort</span></div>
+              <div role="row"><span>CTC / Wilcoxon</span><span>Controls-native 4-20 mA path</span><span>4-20 mA, Modbus TCP/RS-485</span><span>PLC logic owns diagnostics</span></div>
+              <div role="row"><span>Samotics SAM4</span><span>Continuous VFD-fed motor ESA</span><span>REST API or MQTT</span><span>Cloud analytics overlay</span></div>
+              <div role="row"><span>ATPOL III / PdMA</span><span>Owned periodic ESA route</span><span>Software export to confirm</span><span>Training and route discipline</span></div>
+            </div>
+            <div class="question-bank">
+              <h3>Questionnaire Gate</h3>
+              <ol>
+                <li>Can the system deliver meaningful analysis without your cloud dashboard?</li>
+                <li>Do you export raw waveform, FFT spectra, scalar trends, alarm state, sensor health, and asset metadata?</li>
+                <li>Which live/local protocols are supported: OPC UA, Modbus, EtherNet/IP, MQTT/Sparkplug B, REST, SQL, CSV?</li>
+                <li>What still works if subscription fees stop?</li>
+                <li>Can the pilot prove one live local tag in our historian before purchase?</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="settings" aria-labelledby="settings-title">
+          <div class="wide-panel">
+            <div class="panel-titlebar">
+              <div>
+                <h2 id="settings-title">Thresholds and Alert Routing</h2>
+                <p>POC notification routing for vibration, temperature, email, and SMS escalation</p>
+              </div>
+              <span class="status-pill warning">SIMULATED SEND</span>
+            </div>
+            <div class="settings-grid">
+              <form class="settings-card" id="thresholdForm">
+                <h3>Alarm Thresholds</h3>
+                <label>Vibration warning in/s <input id="vibWarn" type="number" min="0.01" max="1" step="0.001"></label>
+                <label>Vibration alarm in/s <input id="vibAlarm" type="number" min="0.01" max="1" step="0.001"></label>
+                <label>Temperature warning deg F <input id="tempWarn" type="number" min="80" max="260" step="1"></label>
+                <label>Temperature alarm deg F <input id="tempAlarm" type="number" min="80" max="260" step="1"></label>
+                <div class="form-actions">
+                  <button type="submit">Apply Thresholds</button>
+                  <button type="button" id="resetThresholds">Reset</button>
+                </div>
+              </form>
+
+              <form class="settings-card" id="alertForm">
+                <h3>Alert Contacts</h3>
+                <label>Email recipients <input id="emailRecipients" type="text" placeholder="maintenance@plant.com, controls@plant.com"></label>
+                <label>Text recipients <input id="smsRecipients" type="text" placeholder="+19205550123, +19205550124"></label>
+                <div class="switch-row">
+                  <label><input id="emailEnabled" type="checkbox" checked> Email alerts</label>
+                  <label><input id="smsEnabled" type="checkbox" checked> Text alerts</label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">Save Routing</button>
+                  <button type="button" id="sendTestAlert">Send Test Alert</button>
+                </div>
+              </form>
+
+              <article class="settings-card">
+                <h3>Alert Behavior</h3>
+                <p>When an asset enters alarm, this demo queues an email and text notification with tag path, values, threshold, and protocol. In a production Ignition build, this maps to alarm pipelines using SMTP and an SMS gateway such as carrier email-to-SMS, Twilio, or plant paging.</p>
+                <p class="soft-warning">Static GitHub Pages cannot send private server-side email or SMS by itself. This screen demonstrates the operator workflow and payload.</p>
+              </article>
+
+              <article class="settings-card alert-log-card">
+                <div class="alarm-header">
+                  <strong>Outbound alert log</strong>
+                  <span id="alertRouteState">Email + SMS enabled</span>
+                </div>
+                <div id="alertLog"></div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="statusbar">
+        <span>PLC NET: OK</span>
+        <span>MQTT BROKER: ONLINE</span>
+        <span>HISTORIAN: WRITING</span>
+        <span>POC DATA: SIMULATED</span>
+      </footer>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

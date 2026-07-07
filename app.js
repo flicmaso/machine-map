@@ -238,6 +238,44 @@ function tagPath(asset, point = "DE-Bearing") {
   return `GBP/DePere/FoldingCarton/${rooms[asset.room].label.replaceAll(" ", "")}/${asset.id}/${point}`;
 }
 
+function csvEscape(value) {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadCsv(filename, headers, rows) {
+  const lines = [headers, ...rows].map((row) => row.map(csvEscape).join(","));
+  const blob = new Blob([lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportTagsCsv() {
+  const rows = assets.filter(tagMatchesFilter).map((asset) => [
+    tagPath(asset), asset.id, asset.name, rooms[asset.room].label,
+    fmtVib(asset.vib), fmtTemp(asset.temp), asset.status.toUpperCase(),
+    asset.protocol, asset.sensor
+  ]);
+  downloadCsv(`tags-${Date.now()}.csv`,
+    ["Tag path", "ID", "Name", "Room", "Vib in/s", "Temp deg F", "Status", "Protocol", "Sensor"], rows);
+}
+
+function exportAlarmsCsv() {
+  const rows = assets.filter((asset) => asset.status !== "normal").map((asset) => [
+    asset.status.toUpperCase(),
+    `${state.acked.has(asset.id) ? "Acked" : "Unacked"}${state.shelved.has(asset.id) ? " / Shelved" : ""}`,
+    tagPath(asset), fmtVib(asset.vib), fmtTemp(asset.temp), asset.protocol
+  ]);
+  downloadCsv(`alarms-${Date.now()}.csv`,
+    ["Priority", "State", "Source", "Vib in/s", "Temp deg F", "Pipeline"], rows);
+}
+
 function tagMatchesFilter(asset) {
   const query = state.tagFilter;
   if (!query) return true;
@@ -464,6 +502,12 @@ function bindControls() {
       renderTagTable();
     });
   }
+
+  const tagsExport = document.getElementById("exportTagsCsv");
+  if (tagsExport) tagsExport.addEventListener("click", exportTagsCsv);
+
+  const alarmsExport = document.getElementById("exportAlarmsCsv");
+  if (alarmsExport) alarmsExport.addEventListener("click", exportAlarmsCsv);
 }
 
 initData();

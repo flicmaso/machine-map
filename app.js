@@ -365,6 +365,7 @@ function render() {
 function bindControls() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
+      if (!tab.dataset.view) return;
       document.querySelectorAll(".tab").forEach((item) => item.classList.remove("is-active"));
       document.querySelectorAll(".view").forEach((item) => item.classList.remove("is-active"));
       tab.classList.add("is-active");
@@ -446,45 +447,9 @@ function bindControls() {
   });
 }
 
-async function sha256(value) {
-  const bytes = new Uint8Array(value.length);
-  for (let index = 0; index < value.length; index += 1) {
-    bytes[index] = value.charCodeAt(index) & 0xff;
-  }
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function unlockWithKey(key) {
-  const accessHash = "b4236cde341f421f54e2de36bb6dab672c2774d5cec535d4eecde7e88dd7a36d";
-  const supplied = (key || "").trim();
-  if (!supplied) return false;
-  if (await sha256(supplied) === accessHash) {
-    sessionStorage.setItem("scadaAccess", supplied);
-    document.body.classList.remove("is-locked");
-    return true;
-  }
-  return false;
-}
-
-function bindAccessGate() {
-  const params = new URLSearchParams(location.hash.replace(/^#/, ""));
-  const hashKey = params.get("key");
-  const storedKey = sessionStorage.getItem("scadaAccess");
-  unlockWithKey(hashKey || storedKey).then((ok) => {
-    if (ok) return;
-    document.getElementById("unlockBtn").addEventListener("click", async () => {
-      const key = document.getElementById("accessKey").value;
-      const unlocked = await unlockWithKey(key);
-      document.getElementById("accessError").textContent = unlocked ? "" : "Access key rejected.";
-    });
-  });
-}
-
 initData();
 buildMap();
 bindControls();
-bindAccessGate();
 renderAlertSettings();
 render();
 setInterval(() => {

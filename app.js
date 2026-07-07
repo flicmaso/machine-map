@@ -29,6 +29,7 @@ const state = {
   lastAlertStatus: new Map(),
   acked: new Set(),
   shelved: new Set(),
+  tagFilter: "",
   config: {
     vibWarn: 0.18,
     vibAlarm: 0.3,
@@ -237,8 +238,16 @@ function tagPath(asset, point = "DE-Bearing") {
   return `GBP/DePere/FoldingCarton/${rooms[asset.room].label.replaceAll(" ", "")}/${asset.id}/${point}`;
 }
 
+function tagMatchesFilter(asset) {
+  const query = state.tagFilter;
+  if (!query) return true;
+  const haystack = [asset.id, asset.name, tagPath(asset), asset.protocol, asset.sensor, asset.status, rooms[asset.room].label].join(" ").toLowerCase();
+  return query.split(/\s+/).every((term) => haystack.includes(term));
+}
+
 function renderTagTable() {
-  const rows = assets.map((asset) => {
+  const visible = assets.filter(tagMatchesFilter);
+  const rows = visible.map((asset) => {
     const historian = asset.electrical ? "On Change" : "Periodic 1.2s";
     return `
       <div class="tag-row ${asset.status}" role="row">
@@ -256,8 +265,10 @@ function renderTagTable() {
     <div class="tag-row header" role="row">
       <span>Tag path</span><span>Vib</span><span>Temp</span><span>Alarm</span><span>Quality</span><span>Historian</span><span>Driver</span>
     </div>
-    ${rows}
+    ${rows || `<div class="tag-row normal" role="row"><span>No tags match "${state.tagFilter}"</span><span>--</span><span>--</span><span>--</span><span>--</span><span>--</span><span>--</span></div>`}
   `;
+  const counter = document.getElementById("tagFilterCount");
+  if (counter) counter.textContent = state.tagFilter ? `${visible.length} of ${assets.length} tags` : `${assets.length} tags`;
 }
 
 function renderAlarmJournal() {
@@ -445,6 +456,14 @@ function bindControls() {
     addAlert(assets.find((asset) => asset.id === state.selectedId), "manual operator test alert", true);
     render();
   });
+
+  const tagSearch = document.getElementById("tagSearch");
+  if (tagSearch) {
+    tagSearch.addEventListener("input", () => {
+      state.tagFilter = tagSearch.value.trim().toLowerCase();
+      renderTagTable();
+    });
+  }
 }
 
 initData();
